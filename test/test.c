@@ -1,4 +1,4 @@
 #include "xregex.h"
-int main(){
-    return 0;
+int utf82int(char *c, int *result){
+    
 }
