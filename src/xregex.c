@@ -7,7 +7,8 @@ int utf8ToInt(unsigned char *c, int *result);
 int utf8ToInt(unsigned char *c, int *result) {
     int byte_num = 0;
     int tmp = *c;
-    while (0x80 == tmp & FIRST_BIT) {
+    *result = 0;
+    while (0x80 == (tmp & FIRST_BIT)) {
         byte_num++;
         tmp <<= 1;
     }
@@ -19,11 +20,17 @@ int utf8ToInt(unsigned char *c, int *result) {
     case 1:
         return 0;
     case 2:
-        *result += (int)(*c - 0xc0) * 0x40;
-    case 3:
-        *result += (int)(*c - 0xe0) * 0x40 * 0x40;
-    default:
+        *result += (int)(*c - 0xc0);
         break;
+    case 3:
+        *result += (int)(*c - 0xe0);
+        break;
+    case 4:
+        *result += (int)(*c - 0xf0);
+        break;
+    default:
+        return 0;
+        
     }
 
     for (int i = byte_num - 1; i > 0; i--){
@@ -32,8 +39,8 @@ int utf8ToInt(unsigned char *c, int *result) {
         if (0xc0 != (*c) & FIRST_TWO_BITS) {
             return 0;
         } else {
-            *result += *c;
-            return byte_num;
+            *result += (*c - 0x80);
         }
     }
+    return byte_num;
 }
