@@ -29,6 +29,8 @@ void testUtf8ToInt(CuTest *tc) {
     CuAssertIntEquals(tc, 1, size);
     CuAssertIntEquals(tc, 'A', result);
 
+
+    
     int i[5] = {-1,0};
     size = utf8ToInt((unsigned char *)&i, &result);
     CuAssertIntEquals(tc, 0, size);
@@ -64,10 +66,57 @@ void testIntToUtf8(CuTest *tc) {
     CuAssertIntEquals(tc, 0, size);
 }
 
+void testInitXregexTree(CuTest *tc){
+    XregexTree *xt = initXregexTree();
+    CuAssertTrue(tc, xt->root->childSize == 0);
+    CuAssertTrue(tc, xt->root->childNum == 0);
+    CuAssertTrue(tc, xt->root->child == NULL);
+    CuAssertTrue(tc, xt->root->content == NULL);
+    freeXregexTree(xt);
+}
+
+void testNewXregexNode(CuTest *tc){
+    XregexNode *xn = newXregexNode();
+    CuAssertTrue(tc, xn->childSize == 0);
+    CuAssertTrue(tc, xn->childNum == 0);
+    deleteXregexNode(xn,FORCE);
+}
+
+void testAddChildXregexNode(CuTest *tc){
+    XregexNode *xn1 = newXregexNode();
+    XregexNode *xn2 = newXregexNode();
+    addChildXregexNode(xn1, xn2);
+    CuAssertTrue(tc, xn1->childNum == 1);
+    CuAssertPtrEquals(tc, xn2, xn1->child[0]);
+    deleteXregexNode(xn1, RECURSIVE);
+}
+
+void testDeleteXregexNode(CuTest *tc){
+    XregexNode *xn1 = newXregexNode();
+    int result = deleteXregexNode(xn1, FORCE);
+    CuAssertIntEquals(tc, 0, result);
+
+    xn1 = newXregexNode();
+    XregexNode *xn2 = newXregexNode();
+    addChildXregexNode(xn1, xn2);
+    result = deleteXregexNode(xn1, RESTRICT);
+    CuAssertPtrNotNull(tc,xn1);
+    CuAssertIntEquals(tc, -1, result);
+
+    result = deleteXregexNode(xn1, RECURSIVE);
+    CuAssertIntEquals(tc, 0, result);
+
+}
+
 CuSuite *CuGetSuite(void) {
     CuSuite *suite = CuSuiteNew();
 
     SUITE_ADD_TEST(suite, testUtf8ToInt);
     SUITE_ADD_TEST(suite, testIntToUtf8);
+    SUITE_ADD_TEST(suite, testInitXregexTree);
+    SUITE_ADD_TEST(suite, testNewXregexNode);
+    SUITE_ADD_TEST(suite, testAddChildXregexNode);
+    SUITE_ADD_TEST(suite, testDeleteXregexNode);
+
     return suite;
 }
