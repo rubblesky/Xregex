@@ -51,7 +51,8 @@ enum Type {
 
 typedef struct Symbol {
     enum Type type;
-    int value;
+    int *value;
+    int valueSize;
 } Symbol;
 
 typedef struct SymbolTable {
@@ -81,6 +82,7 @@ void appendSymbol(SymbolTable *st, Symbol *symbol) {
     }
     st->symbol[st->tableSize].type = symbol->type;
     st->symbol[st->tableSize].value = symbol->value;
+    st->symbol[st->tableSize].valueSize = symbol->valueSize;
     st->tableSize++;
 }
 
@@ -102,10 +104,11 @@ SymbolTable *lexicalAnalyze(char *regexExpress) {
     int c, size;
 
     while ((size = utf8ToInt(regexExpress,&c)) != 0){
-        appendIntVector(intArray, c);
+        appendIntVector(intArray, &c);
     }
 
-    while ((size = utf8ToInt(regexExpress, &c)) != 0) {
+    for (int i = 0; i < intArraySize;i++) {
+        c = getIntVectorData(intArray,i);
         if (c == '\\' && isEscaped == 0) {
             isEscaped = 1;
             regexExpress += size;
@@ -113,7 +116,7 @@ SymbolTable *lexicalAnalyze(char *regexExpress) {
         }
         if (isEscaped == 1) {
             if (isInEscapedCharacters(c)) {
-                Symbol tmp = {CHARACTER, c};
+                Symbol tmp = {CHARACTER, c ,1};
                 appendSymbol(st, &tmp);
             } else if (isInMetachCharacters(c)) {
                 Symbol tmp;
@@ -140,9 +143,11 @@ SymbolTable *lexicalAnalyze(char *regexExpress) {
                 dealLexicalError1();
             }
         }else {
-            if (c <= '9' && c >= '0') {
-                size = utf8ToInt(regexExpress, &c);
-                
+            /*
+            if () {
+
+                }
+            */
             }
         }
 
