@@ -3,8 +3,22 @@
 
 #include "xregex.h"
 
-const int escapedCharacters[] = {'.', '*', '(', ')', '[', ']', '{', '}', '|', 0};
-
+const int metachCharacters[] = {'.', '*', '(', ')', '[', ']', '{', '}', '|', '\\', 0};
+const int escapedCharacters[] = {'n', 'r', 't'};
+int isInMetachCharacters(int c) {
+    /* 先用循环实现 之后看需要是否要改成hash*/
+    int i;
+    for (i = 0; metachCharacters[i] != 0; i++) {
+        if (metachCharacters[i] == c) {
+            break;
+        }
+    }
+    if (metachCharacters[i] == 0) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
 int isInEscapedCharacters(int c) {
     /* 先用循环实现 之后看需要是否要改成hash*/
     int i;
@@ -81,21 +95,56 @@ void freeSymbolTable(SymbolTable *st) {
 
 SymbolTable *lexicalAnalyze(char *regexExpress) {
     int regexExpressSize = strlen(regexExpress);
-    //IntVector *intArray = getIntArrayFromUtf8(regexExpress);
-    int intArraySize = getIntVectorDataSize(regexExpressSize);
+    IntVector *intArray = getIntArrayFromUtf8(regexExpress);
+    int intArraySize = getIntVectorDataSize(intArray);
     SymbolTable *st = initSymbolTable(intArraySize);
     int isEscaped = 0;
     int c, size;
+
+    while ((size = utf8ToInt(regexExpress,&c)) != 0){
+        appendIntVector(intArray, c);
+    }
+
     while ((size = utf8ToInt(regexExpress, &c)) != 0) {
         if (c == '\\' && isEscaped == 0) {
             isEscaped = 1;
             regexExpress += size;
             continue;
-        } else if (isEscaped == 1 && isInEscapedCharacters(c)) {
-            Symbol tmp = {CHARACTER, c};
-        } else if (isEscaped == 1 && !isInEscapedCharacters(c)) {
-            dealLexicalError1();
-        }else if (isEscaped == 0)
+        }
+        if (isEscaped == 1) {
+            if (isInEscapedCharacters(c)) {
+                Symbol tmp = {CHARACTER, c};
+                appendSymbol(st, &tmp);
+            } else if (isInMetachCharacters(c)) {
+                Symbol tmp;
+                switch (c) {
+                    case 'n':
+                        tmp.type = CHARACTER;
+                        tmp.value = '\n';
+                        appendSymbol(st, &tmp);
+                        break;
+                    case 'r':
+                        tmp.type = CHARACTER;
+                        tmp.value = '\r';
+                        appendSymbol(st, &tmp);
+                        break;
+                    case 't':
+                        tmp.type = CHARACTER;
+                        tmp.value = '\t';
+                        appendSymbol(st, &tmp);
+                        break;
+                    default:
+                        break;
+                }
+            } else {
+                dealLexicalError1();
+            }
+        }else {
+            if (c <= '9' && c >= '0') {
+                size = utf8ToInt(regexExpress, &c);
+                
+            }
+        }
 
         isEscaped = 0;
     }
