@@ -4,8 +4,8 @@
 #include <string.h>
 
 #include "CuTest.h"
+#include "stack.h"
 #include "xregex.h"
-
 void testUtf8ToInt(CuTest *tc) {
     char *s;
     s = "😂";
@@ -29,12 +29,9 @@ void testUtf8ToInt(CuTest *tc) {
     CuAssertIntEquals(tc, 1, size);
     CuAssertIntEquals(tc, 'A', result);
 
-
-    
-    int i[5] = {-1,0};
+    int i[5] = {-1, 0};
     size = utf8ToInt((unsigned char *)&i, &result);
     CuAssertIntEquals(tc, 0, size);
-
 }
 
 void testIntToUtf8(CuTest *tc) {
@@ -66,7 +63,7 @@ void testIntToUtf8(CuTest *tc) {
     CuAssertIntEquals(tc, 0, size);
 }
 
-void testInitXregexTree(CuTest *tc){
+void testInitXregexTree(CuTest *tc) {
     XregexTree *xt = initXregexTree();
     CuAssertTrue(tc, xt->root->childSize == 0);
     CuAssertTrue(tc, xt->root->childNum == 0);
@@ -75,14 +72,14 @@ void testInitXregexTree(CuTest *tc){
     freeXregexTree(xt);
 }
 
-void testNewXregexNode(CuTest *tc){
+void testNewXregexNode(CuTest *tc) {
     XregexNode *xn = newXregexNode();
     CuAssertTrue(tc, xn->childSize == 0);
     CuAssertTrue(tc, xn->childNum == 0);
-    deleteXregexNode(xn,FORCE);
+    deleteXregexNode(xn, FORCE);
 }
 
-void testAddChildXregexNode(CuTest *tc){
+void testAddChildXregexNode(CuTest *tc) {
     XregexNode *xn1 = newXregexNode();
     XregexNode *xn2 = newXregexNode();
     addChildXregexNode(xn1, xn2);
@@ -91,7 +88,7 @@ void testAddChildXregexNode(CuTest *tc){
     deleteXregexNode(xn1, RECURSIVE);
 }
 
-void testDeleteXregexNode(CuTest *tc){
+void testDeleteXregexNode(CuTest *tc) {
     XregexNode *xn1 = newXregexNode();
     int result = deleteXregexNode(xn1, FORCE);
     CuAssertIntEquals(tc, 0, result);
@@ -100,12 +97,90 @@ void testDeleteXregexNode(CuTest *tc){
     XregexNode *xn2 = newXregexNode();
     addChildXregexNode(xn1, xn2);
     result = deleteXregexNode(xn1, RESTRICT);
-    CuAssertPtrNotNull(tc,xn1);
+    CuAssertPtrNotNull(tc, xn1);
     CuAssertIntEquals(tc, -1, result);
 
     result = deleteXregexNode(xn1, RECURSIVE);
     CuAssertIntEquals(tc, 0, result);
+}
 
+void assignInt(void *a, void *b) {
+    *(int *)a = *(int *)b;
+}
+void testInitStack(CuTest *tc) {
+    Stack *stack = NULL;
+    stack = initStack(sizeof(int), 0, assignInt);
+    CuAssertPtrNotNull(tc, stack);
+    CuAssertIntEquals(tc, 0, stack->arrayUsedSize);
+    CuAssertIntEquals(tc, DEFAULT_STACK_SIZE, stack->arrayAllocSize);
+    CuAssertIntEquals(tc, sizeof(int), stack->valueTypeSize);
+    freeStack(stack);
+}
+void testPushStack(CuTest *tc) {
+    Stack *stack = NULL;
+    stack = initStack(sizeof(int), 3, assignInt);
+    int c = 5;
+    stackPush(stack, &c);
+    c = 6;
+    stackPush(stack, &c);
+    stackPush(stack, &c);
+    CuAssertIntEquals(tc, 3, stack->arrayAllocSize);
+    stackPush(stack, &c);
+    CuAssertIntEquals(tc, 6, stack->arrayAllocSize);
+    CuAssertIntEquals(tc, 4, stack->arrayUsedSize);
+    freeStack(stack);
+}
+void testPopStack(CuTest *tc) {
+    Stack *stack = NULL;
+    stack = initStack(sizeof(int), 3, assignInt);
+    int c = 5;
+    stackPush(stack, &c);
+    c = 6;
+    stackPush(stack, &c);
+    c = 7;
+    stackPush(stack, &c);
+    c = 8;
+    stackPush(stack, &c);
+
+    c = stackPop(stack);
+    CuAssertIntEquals(tc, 0, c);
+    c = stackPop(stack);
+    c = stackPop(stack);
+    c = stackPop(stack);
+    CuAssertIntEquals(tc, 0, c);
+    c = stackPop(stack);
+    CuAssertIntEquals(tc, -1, c);
+
+    freeStack(stack);
+}
+
+void testGetTopStack(CuTest *tc) {
+    Stack *stack = NULL;
+    stack = initStack(sizeof(int), 3, assignInt);
+    int c = 5;
+    stackPush(stack, &c);
+    c = 6;
+    stackPush(stack, &c);
+    c = 7;
+    stackPush(stack, &c);
+    c = 8;
+    stackPush(stack, &c);
+
+    int *p;
+    p = stackGetTop(stack);
+    CuAssertIntEquals(tc, *p, 8);
+    stackPop(stack);
+    p = stackGetTop(stack);
+    CuAssertIntEquals(tc, *p, 7);
+    stackPop(stack);
+    p = stackGetTop(stack);
+    CuAssertIntEquals(tc, *p, 6);
+    stackPop(stack);
+    p = stackGetTop(stack);
+    CuAssertIntEquals(tc, *p, 5);
+    stackPop(stack);
+
+    freeStack(stack);
 }
 
 CuSuite *CuGetSuite(void) {
@@ -118,5 +193,9 @@ CuSuite *CuGetSuite(void) {
     SUITE_ADD_TEST(suite, testAddChildXregexNode);
     SUITE_ADD_TEST(suite, testDeleteXregexNode);
 
+    SUITE_ADD_TEST(suite, testInitStack);
+    SUITE_ADD_TEST(suite, testPushStack);
+    SUITE_ADD_TEST(suite, testPopStack);
+    SUITE_ADD_TEST(suite, testGetTopStack);
     return suite;
 }

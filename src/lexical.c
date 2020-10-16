@@ -35,6 +35,15 @@ int isInEscapedCharacters(int c) {
 }
 
 enum Type {
+
+    NUMBER,
+    CHARACTER,
+    REPEAT,
+    PARALLEL,
+    LEFT_PARENTHESIS,
+    RIGHT_PARENTHESIS,
+    QUESTION_MARK, /* ? */
+    /*
     NUMBER,
     CHARACTER,
     LEFT_PARENTHESIS,
@@ -43,10 +52,11 @@ enum Type {
     RIGHT_BRACKET,
     LEFT_BRACE,
     RIGHT_BRACK,
-    ASTERISK,      /*星号*/
-    QUESTION_MARK, /* ? */
-    POINT,         /* . */
-    VERTICAL_BAR   /* | */
+    ASTERISK,      /*星号*
+    QUESTION_MARK, /* ? *
+    POINT,         /* . *
+    VERTICAL_BAR   /* | *
+    */
 };
 
 typedef struct Symbol {
@@ -69,6 +79,7 @@ SymbolTable *initSymbolTable(int size) {
 }
 
 void appendSymbol(SymbolTable *st, Symbol *symbol) {
+    /*这个函数有问题 value的数据类型*/
     if (st->tableSize >= st->allocSize) {
         st->allocSize *= 2;
         Symbol *tmp = realloc(st->symbol, st->allocSize * sizeof(Symbol));
@@ -103,12 +114,13 @@ SymbolTable *lexicalAnalyze(char *regexExpress) {
     int isEscaped = 0;
     int c, size;
 
-    while ((size = utf8ToInt(regexExpress,&c)) != 0){
+    while ((size = utf8ToInt(regexExpress, &c)) != 0) {
         appendIntVector(intArray, &c);
     }
-
-    for (int i = 0; i < intArraySize;i++) {
-        c = getIntVectorData(intArray,i);
+    int isNotMatch = 0;
+    int num = 0;
+    for (int i = 0; i < intArraySize; i++) {
+        c = getIntVectorData(intArray, i);
         if (c == '\\' && isEscaped == 0) {
             isEscaped = 1;
             regexExpress += size;
@@ -116,7 +128,7 @@ SymbolTable *lexicalAnalyze(char *regexExpress) {
         }
         if (isEscaped == 1) {
             if (isInEscapedCharacters(c)) {
-                Symbol tmp = {CHARACTER, c ,1};
+                Symbol tmp = {CHARACTER, c, 1};
                 appendSymbol(st, &tmp);
             } else if (isInMetachCharacters(c)) {
                 Symbol tmp;
@@ -140,24 +152,41 @@ SymbolTable *lexicalAnalyze(char *regexExpress) {
                         break;
                 }
             } else {
+                /*不合法的转义*/
                 dealLexicalError1();
             }
-        }else {
-            /*
-            if () {
-
-                }
-            */
+        } else {
+            Symbol tmp;
+            switch (c) {
+                case '{':
+                    i += dealDefiniteRepeat(intArray);
+                    break;
+                case '[':
+                    i += dealParallel(intArray);
+                    break;
+                case '*':
+                    tmp.type = REPEAT;
+                    tmp.value = -1;
+                case '}':
+                case ']':
+                    /*不合法的匹配*/
+                    dealLexicalError3();
+                default:
+                    tmp.type = CHARACTER;
+                    break;
             }
+
+            
         }
-
-        isEscaped = 0;
     }
 
-    if (*(regexExpress + size) != 0) {
-        dealLexicalError2();
-        /*还没有实现*/
-    }
+    isEscaped = 0;
+}
+
+if (*(regexExpress + size) != 0) {
+    dealLexicalError2();
+    /*还没有实现*/
+}
 }
 
 IntVector *getIntArrayFromUtf8(char *regexExpress) {

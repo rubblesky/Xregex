@@ -1,5 +1,5 @@
-set(SRC_LIST "xregex.c" "lexical.c" "stack.c")
-
+set(SRC_LIST "xregex.c" "stack.c")
+#"lexical.c"
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
 add_library(Xregex SHARED)
