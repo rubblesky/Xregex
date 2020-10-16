@@ -26,8 +26,11 @@ void freeStack(Stack *stack) {
 int stackPush(Stack *stack, void *value) {
     if (stack->arrayAllocSize == stack->arrayUsedSize) {
         stack->arrayAllocSize *= 2;
-        /*这里realloc函数可能会出问题*/
-        stack->valueArray = realloc(stack->valueArray, stack->valueTypeSize * stack->arrayAllocSize);
+        void *tmp = realloc(stack->valueArray, stack->valueTypeSize * stack->arrayAllocSize);
+        if(tmp == NULL){
+            return -1;
+        }
+        stack->valueArray = tmp;
     }
     stack->assign(&(((unsigned char *)(stack->valueArray))[stack->arrayUsedSize * stack->valueTypeSize]), value);
     stack->arrayUsedSize++;
@@ -45,7 +48,7 @@ int stackPop(Stack *stack) {
 
 void *stackGetTop(Stack *stack) {
     if (stack->arrayUsedSize > 0) {
-        return &(((char *)(stack->valueArray))[(stack->arrayUsedSize - 1) * stack->valueTypeSize]);
+        return &(((unsigned char *)(stack->valueArray))[(stack->arrayUsedSize - 1) * stack->valueTypeSize]);
     } else {
         return NULL;
     }
