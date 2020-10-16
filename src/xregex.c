@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define FIRST_BIT (0x80)       //1000 0000b
 #define FIRST_TWO_BITS (0xc0)  //1100 0000b
@@ -100,7 +101,7 @@ IntVector *initIntVector(int size) {
     return iv;
 }
 void appendIntVector(IntVector *iv, int data) {
-    if (iv->dataSize == iv->dataSize) {
+    if (iv->dataSize == iv->allocSize) {
         iv->allocSize *= 2;
         int *tmp = realloc(iv->vector, sizeof(int) * iv->allocSize);
         if (tmp == NULL) {
@@ -120,7 +121,7 @@ int getIntVectorDataSize(IntVector *iv) {
 }
 
 int getIntVectorData(IntVector *iv, int position) {
-    if (position > 0 && position < iv->dataSize) {
+    if (position >= 0 && position < iv->dataSize) {
         return iv->vector[position];
     } else {
         DEAL_ERRER(-2, "vector out of size\n");
@@ -133,6 +134,19 @@ void setIntVectorData(IntVector *iv, int position, int data) {
         DEAL_ERRER(-2, "vector out of size\n");
     }
 }
+
+IntVector *copyIntVector(IntVector *iv){
+    /*复制构造函数*/
+    IntVector *ivCopy = initIntVector(iv->allocSize);
+    ivCopy->dataSize = iv->dataSize;
+    memcpy(ivCopy->vector, iv->vector, iv->dataSize *sizeof(int));
+    return ivCopy;
+}
+/*只删除数据 不释放内存*/
+void deleteIntVectorData(IntVector *iv) {
+    iv->dataSize = 0;
+}
+
 void freeIntVector(IntVector *iv) {
     if (iv->allocSize > 0) {
         free(iv->vector);

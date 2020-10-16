@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "CuTest.h"
+#include "lexical.c"
 #include "stack.h"
 #include "xregex.h"
 void testUtf8ToInt(CuTest *tc) {
@@ -183,7 +184,60 @@ void testGetTopStack(CuTest *tc) {
     freeStack(stack);
 }
 
-CuSuite *CuGetSuite(void) {
+void testInitIntVector(CuTest *tc){
+    IntVector *iv = NULL;
+    iv = initIntVector(5);
+    CuAssertIntEquals(tc, iv->allocSize, 5);
+    CuAssertPtrNotNull(tc, iv);
+    CuAssertIntEquals(tc, iv->dataSize, 0);
+    freeIntVector(iv);
+}
+void testAppendIntVector(CuTest *tc) {
+    IntVector* iv = initIntVector(2);
+    appendIntVector(iv, 1);
+    CuAssertIntEquals(tc, iv->vector[0], 1);
+    CuAssertIntEquals(tc, iv->dataSize, 1);
+    appendIntVector(iv, 2);
+    CuAssertIntEquals(tc, iv->vector[1], 2);
+    appendIntVector(iv, 3);
+    CuAssertIntEquals(tc, iv->vector[2], 3);
+    CuAssertIntEquals(tc, iv->allocSize, 4);
+    CuAssertIntEquals(tc, iv->dataSize, 3);
+    freeIntVector(iv);
+}
+void testDeleteIntVector(CuTest *tc) {
+    IntVector *iv = initIntVector(2);
+    appendIntVector(iv, 1);
+    appendIntVector(iv, 2);
+    CuAssertIntEquals(tc, iv->dataSize, 2);
+    deleteIntVectorData(iv);
+    CuAssertIntEquals(tc, iv->dataSize, 0);
+    freeIntVector(iv);
+}
+void testGetIntVectorData(CuTest *tc) {
+    IntVector *iv = initIntVector(2);
+    appendIntVector(iv, 1);
+    appendIntVector(iv, 2);
+    int i = getIntVectorData(iv, 0);
+    CuAssertIntEquals(tc, i, 1);
+    i = getIntVectorData(iv, 1);
+    CuAssertIntEquals(tc, i, 2);
+    freeIntVector(iv);
+}
+
+void testDealDefiniteRepeat(CuTest *tc) {
+    char re[] = "{1,2}";
+    IntVector *iv = getIntArrayFromUtf8(re);
+    SymbolTable *st = initSymbolTable(5);
+    dealDefiniteRepeat(iv, 0, st);
+    CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
+    CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
+    freeIntVector(iv);
+    freeSymbolTable(st);
+}
+
+CuSuite *
+CuGetSuite(void) {
     CuSuite *suite = CuSuiteNew();
 
     SUITE_ADD_TEST(suite, testUtf8ToInt);
@@ -197,5 +251,12 @@ CuSuite *CuGetSuite(void) {
     SUITE_ADD_TEST(suite, testPushStack);
     SUITE_ADD_TEST(suite, testPopStack);
     SUITE_ADD_TEST(suite, testGetTopStack);
+
+    SUITE_ADD_TEST(suite, testInitIntVector);
+    SUITE_ADD_TEST(suite, testAppendIntVector);
+    SUITE_ADD_TEST(suite, testDeleteIntVector);
+    SUITE_ADD_TEST(suite, testGetIntVectorData);
+
+    SUITE_ADD_TEST(suite, testDealDefiniteRepeat);
     return suite;
 }

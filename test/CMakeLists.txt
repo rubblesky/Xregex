@@ -14,3 +14,8 @@ target_link_libraries(test
 PRIVATE
     Xregex
 )
+
+target_include_directories(test
+    PUBLIC 
+        ${PROJECT_SOURCE_DIR}/src
+)

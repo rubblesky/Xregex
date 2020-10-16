@@ -29,6 +29,9 @@ void appendIntVector(IntVector *iv, int data);
 int getIntVectorDataSize(IntVector *iv);
 int getIntVectorData(IntVector *iv, int position);
 void setIntVectorData(IntVector *iv, int position, int data);
+IntVector *copyIntVector(IntVector *iv);
+/*只删除数据 不释放内存*/
+void deleteIntVectorData(IntVector *iv);
 void freeIntVector(IntVector *iv);
 
 typedef struct RepeatOption {

@@ -1,19 +1,19 @@
 #include <stdlib.h>
 #include <string.h>
-
+#include <stdio.h>
 #include "xregex.h"
 
-const int metachCharacters[] = {'.', '*', '(', ')', '[', ']', '{', '}', '|', '\\', 0};
+const int metaCharacters[] = {'.', '*', '(', ')', '[', ']', '{', '}', '|', '\\', 0};
 const int escapedCharacters[] = {'n', 'r', 't'};
-int isInMetachCharacters(int c) {
+int isInMetaCharacters(int c) {
     /* 先用循环实现 之后看需要是否要改成hash*/
     int i;
-    for (i = 0; metachCharacters[i] != 0; i++) {
-        if (metachCharacters[i] == c) {
+    for (i = 0; metaCharacters[i] != 0; i++) {
+        if (metaCharacters[i] == c) {
             break;
         }
     }
-    if (metachCharacters[i] == 0) {
+    if (metaCharacters[i] == 0) {
         return 0;
     } else {
         return 1;
@@ -39,7 +39,8 @@ enum Type {
     NUMBER,
     CHARACTER,
     REPEAT,
-    PARALLEL,
+    VERTICAL_BAR, /* | */
+    SET,          /* [] */
     LEFT_PARENTHESIS,
     RIGHT_PARENTHESIS,
     QUESTION_MARK, /* ? */
@@ -61,8 +62,7 @@ enum Type {
 
 typedef struct Symbol {
     enum Type type;
-    int *value;
-    int valueSize;
+    IntVector * value;
 } Symbol;
 
 typedef struct SymbolTable {
@@ -74,8 +74,8 @@ typedef struct SymbolTable {
 SymbolTable *initSymbolTable(int size) {
     SymbolTable *symbolTbale = malloc(sizeof(SymbolTable));
     symbolTbale->allocSize = size;
-    symbolTbale->symbol = malloc(sizeof(SymbolTable) * size);
-    symbolTbale->tableSize = 0;
+    symbolTbale->symbol = malloc(sizeof(Symbol) * size);
+    //symbolTbale->symbol->value = initIntVector(5);
 }
 
 void appendSymbol(SymbolTable *st, Symbol *symbol) {
@@ -92,101 +92,90 @@ void appendSymbol(SymbolTable *st, Symbol *symbol) {
         ;
     }
     st->symbol[st->tableSize].type = symbol->type;
-    st->symbol[st->tableSize].value = symbol->value;
-    st->symbol[st->tableSize].valueSize = symbol->valueSize;
+    st->symbol[st->tableSize].value = copyIntVector(symbol->value);
     st->tableSize++;
 }
 
 void freeSymbolTable(SymbolTable *st) {
-    if (st->allocSize != 0) {
+    for (int i = 0; i < st->tableSize;i++){
+        freeIntVector(st->symbol[i].value);
+    }
+    if(st->allocSize != 0){
         free(st->symbol);
     }
     free(st);
 }
 
-//IntVector *getIntArrayFromUtf8(char *regexExpress);
-
+IntVector *getIntArrayFromUtf8(char *regexExpress);
+int dealDefiniteRepeat(IntVector *intArray, int pos, SymbolTable *st);
 SymbolTable *lexicalAnalyze(char *regexExpress) {
-    int regexExpressSize = strlen(regexExpress);
     IntVector *intArray = getIntArrayFromUtf8(regexExpress);
     int intArraySize = getIntVectorDataSize(intArray);
     SymbolTable *st = initSymbolTable(intArraySize);
-    int isEscaped = 0;
-    int c, size;
 
-    while ((size = utf8ToInt(regexExpress, &c)) != 0) {
-        appendIntVector(intArray, &c);
-    }
-    int isNotMatch = 0;
-    int num = 0;
+    int isEscaped = 0;
+    int c;
+    Symbol tmp;
+    tmp.value = initIntVector(5);
     for (int i = 0; i < intArraySize; i++) {
         c = getIntVectorData(intArray, i);
         if (c == '\\' && isEscaped == 0) {
             isEscaped = 1;
-            regexExpress += size;
             continue;
         }
         if (isEscaped == 1) {
             if (isInEscapedCharacters(c)) {
-                Symbol tmp = {CHARACTER, c, 1};
+                tmp.type = CHARACTER;
+                appendIntVector(tmp.value, c);
                 appendSymbol(st, &tmp);
-            } else if (isInMetachCharacters(c)) {
+            } else if (isInMetaCharacters(c)) {
+                deleteIntVectorData(tmp.value);
                 Symbol tmp;
+                tmp.type = CHARACTER;
                 switch (c) {
                     case 'n':
-                        tmp.type = CHARACTER;
-                        tmp.value = '\n';
-                        appendSymbol(st, &tmp);
+                        appendIntVector(tmp.value, '\n');
                         break;
                     case 'r':
-                        tmp.type = CHARACTER;
-                        tmp.value = '\r';
-                        appendSymbol(st, &tmp);
+                        appendIntVector(tmp.value, '\r');
                         break;
                     case 't':
-                        tmp.type = CHARACTER;
-                        tmp.value = '\t';
-                        appendSymbol(st, &tmp);
+                        appendIntVector(tmp.value, '\t');
                         break;
                     default:
+                        fprintf(stderr, "未处理的元字符\n");
                         break;
                 }
+                appendSymbol(st, &tmp);
             } else {
                 /*不合法的转义*/
-                dealLexicalError1();
+                /*可能还会在这加上匿名捕获的内容*/
+                //dealLexicalError1();
             }
         } else {
-            Symbol tmp;
             switch (c) {
                 case '{':
-                    i += dealDefiniteRepeat(intArray);
+                    i += dealDefiniteRepeat(intArray,i,st);
                     break;
                 case '[':
-                    i += dealParallel(intArray);
+                    //i += dealParallel(intArray,st);
                     break;
                 case '*':
-                    tmp.type = REPEAT;
-                    tmp.value = -1;
+                    //tmp.type = REPEAT;
+                    //tmp.value = -1;
                 case '}':
                 case ']':
                     /*不合法的匹配*/
-                    dealLexicalError3();
+                    //dealLexicalError3();
                 default:
                     tmp.type = CHARACTER;
                     break;
             }
-
-            
         }
+        isEscaped = 0;
     }
-
-    isEscaped = 0;
-}
-
-if (*(regexExpress + size) != 0) {
-    dealLexicalError2();
-    /*还没有实现*/
-}
+    freeIntVector(tmp.value);
+    return st;
 }
 
 IntVector *getIntArrayFromUtf8(char *regexExpress) {
@@ -197,4 +186,62 @@ IntVector *getIntArrayFromUtf8(char *regexExpress) {
         appendIntVector(intArray, c);
     }
     return intArray;
+}
+int dealDefiniteRepeat(IntVector *intArray,int pos,SymbolTable* st){
+    int i = pos;
+    if (getIntVectorData(intArray, i) != '{') {
+        return 0;
+    } else {
+        i++;
+        int c;
+        int isEnd = 0;
+        Symbol tmp;
+        tmp.value = initIntVector(5);
+        int num = 0;
+        int hasComma = 0;
+        while ((c = getIntVectorData(intArray, i)) != '\0' && !isEnd) {
+            i++;
+            switch (c)
+            {
+            case '}':
+                if(hasComma){
+                    if(num == 0){
+                        appendIntVector(tmp.value, -1);
+                    }else{
+                        appendIntVector(tmp.value, num);
+                    }
+                }else{
+                    appendIntVector(tmp.value, getIntVectorData(tmp.value, 0));
+                }
+                isEnd = 1;
+                break;
+            case ',':
+                appendIntVector(tmp.value, num);
+                num = 0;
+                hasComma = 1;
+                break;
+            case ' ':
+                break;
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                num *= 10;
+                num += c - '0';
+                break;
+            default:
+                break;
+            }
+        }
+
+        appendSymbol(st, &tmp);
+        freeIntVector(tmp.value);
+    }
+
+    return i - pos;
 }
