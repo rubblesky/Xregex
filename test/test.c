@@ -110,7 +110,7 @@ void assignInt(void *a, void *b) {
 }
 void testInitStack(CuTest *tc) {
     Stack *stack = NULL;
-    stack = initStack(sizeof(int), 0, assignInt);
+    stack = INIT_STACK(int, 0, assignInt);
     CuAssertPtrNotNull(tc, stack);
     CuAssertIntEquals(tc, 0, stack->arrayUsedSize);
     CuAssertIntEquals(tc, DEFAULT_STACK_SIZE, stack->arrayAllocSize);
@@ -234,6 +234,16 @@ void testDealDefiniteRepeat(CuTest *tc) {
     CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
     freeIntVector(iv);
     freeSymbolTable(st);
+    /*
+    char re1[] = "{\11,2}";
+    iv = getIntArrayFromUtf8(re1);
+    st = initSymbolTable(5);
+    dealDefiniteRepeat(iv, 0, st);
+    CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
+    CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
+    freeIntVector(iv);
+    freeSymbolTable(st);
+    */ 
 }
 
 CuSuite *

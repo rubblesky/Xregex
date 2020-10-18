@@ -10,6 +10,8 @@ typedef struct Stack {
 
     assignFunction assign;/*void (*assign)(void *assignedValue, void *fromValue);*/
 } Stack;
+#define INIT_STACK(type, stackSize,assignFunction) initStack(sizeof(type),stackSize,assignFunction)
+
 Stack *initStack(int typeSize, int stackSize, assignFunction assign);
 void freeStack(Stack *stack);
 int stackPush(Stack *stack, void *value);
