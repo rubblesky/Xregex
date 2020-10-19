@@ -158,6 +158,7 @@ SymbolTable *lexicalAnalyze(char *regexExpress) {
 }
 
 void lexicalError(IntVector *intArray, int pos, char *msg) {
+    int errorPos = pos;
     putchar('\n');
     printf(msg);
     putchar('\n');
@@ -166,12 +167,18 @@ void lexicalError(IntVector *intArray, int pos, char *msg) {
     } else {
         pos = 0;
     }
-    char c[5];
+    char c[9];
     int vectorSize = getIntVectorDataSize(intArray);
-    for (int i = 0; i < LEXICAL_ERROR_DISPLAY && pos < vectorSize; i++) {
-        //但愿不是未定义行为
+    for (int i = 0; i < LEXICAL_ERROR_DISPLAY && i < vectorSize; i++) {
         c[intToUtf8(getIntVectorData(intArray, pos + i), c)] = '\0';
-        printf(c);
+        if (errorPos != pos + i) {
+            //但愿不是未定义行为
+            printf(c);
+        } else {
+            printf("\033[31m");
+            printf(c);
+            printf("\033[0m");
+        }
     }
     putchar('\n');
     exit(-1);
@@ -235,12 +242,19 @@ IntVector *getIntArrayFromUtf8(char *regexExpress) {
     IntVector *intArray = initIntVector(strlen(regexExpress));
     int c, size;
     while (0 != (size = utf8ToInt(regexExpress, &c))) {
+        if (c == 0) {
+            appendIntVector(intArray, 0);
+            break;
+        }
         regexExpress += size;
         appendIntVector(intArray, c);
     }
     return intArray;
 }
 int dealDefiniteRepeat(IntVector *intArray, int pos, SymbolTable *st) {
+
+    
+    /*
     int i = pos;
     if (getIntVectorData(intArray, i) != '{') {
         return 0;
@@ -250,53 +264,47 @@ int dealDefiniteRepeat(IntVector *intArray, int pos, SymbolTable *st) {
         int isEnd = 0;
         Symbol tmp;
         tmp.value = initIntVector(5);
-        int num = 0;
         int hasComma = 0;
         while ((c = getIntVectorData(intArray, i)) != '\0' && !isEnd) {
-            i++;
-            switch (c) {
-                case '}':
-                    if (hasComma) {
-                        if (num == 0) {
-                            appendIntVector(tmp.value, -1);
-                        } else {
-                            appendIntVector(tmp.value, num);
-                        }
-                    } else {
-                        appendIntVector(tmp.value, getIntVectorData(tmp.value, 0));
-                    }
-                    isEnd = 1;
-                    break;
-                case ',':
-                    appendIntVector(tmp.value, num);
-                    num = 0;
-                    hasComma = 1;
-                    break;
-                case ' ':
-                    break;
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
+            if (c == ' ') {
+                continue;
+            } else if (c >= '0' && c <= '9' && getIntVectorDataSize(tmp.value) <= 2) {
+                int num = 0;
+                while (c >= '0' && c <= '9') {
                     num *= 10;
                     num += c - '0';
-                    break;
-                default:
-                    lexicalError(intArray, i, "不合法的字符：");
-                    break;
+                    i++;
+                    c = getIntVectorData(intArray, i);
+                }
+                appendIntVector(tmp.value, num);
+                num = 0;
+            } else if (c == ',') {
+                int arraySize = getIntVectorDataSize(tmp.value);
+                if (arraySize == 1) {
+                    continue;
+                } else if (arraySize == 0) {
+                    appendIntVector(tmp.value, 0);
+                    continue;
+                } else {
+                    lexicalError(intArray, i, "多余的逗号：");
+                }
+            } else if (c == '}') {
+                break;
+            } else {
+                lexicalError(intArray, i, "不合法的字符：");
             }
+            i++;
         }
 
+        if (getIntVectorDataSize(tmp.value) == 1) {
+            appendIntVector(tmp.value, getIntVectorData(tmp.value, 0));
+        }
         appendSymbol(st, &tmp);
         freeIntVector(tmp.value);
     }
 
     return i - pos;
+*/
 }
 
 int dealParallel(IntVector *intArray, int pos, SymbolTable *st) {
