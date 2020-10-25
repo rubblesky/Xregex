@@ -5,21 +5,20 @@
 #include "vector.h"
 typedef struct Status Status;
 typedef struct Edge {
-    Status start;
-    Status end;
+    Status *start;
+    Status *end;
     Vector *matchContent;
-
+    
 } Edge;
 
 struct Status {
-    int statusIdentifier;
-    //Vector *inEdge;
-    Vector *outEdge;
+    Vector **outEdge;
+    Vector **inEdge;
 };
 
 typedef struct AutoMaton {
     Vector *status;
+    Vector *edge;
 } AutoMaton;
-
 
 #endif

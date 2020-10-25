@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "vector.h"
 Vector *initVector(int VectorSize, int typeSize, assignFunction assign) {
     Vector *v = malloc(sizeof(Vector));
@@ -20,7 +21,8 @@ Vector *initVector(int VectorSize, int typeSize, assignFunction assign) {
 }
 
 void freeVector(Vector *v){
-    if(v->allocSize != 0){
+    if (v == NULL) return;
+    else if (v->allocSize != 0) {
         free(v->vector);
     }
     free(v);
@@ -59,3 +61,13 @@ int getValueVector(Vector *v, int pos,void * value){
     }
 }
 
+Vector * copyVector(Vector *v){
+    Vector *tmp = initVector(v->allocSize, v->typeSize, v->assign);
+    if (tmp == NULL) {
+        return NULL;
+    } else {
+        tmp->dataSize = v->dataSize;
+        memcpy(tmp->vector, v->vector, v->typeSize * v->dataSize);
+        return tmp;
+    }
+}
