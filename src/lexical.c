@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "automaton.h"
 #include "xregex.h"
-
 #define LEXICAL_ERROR_DISPLAY 10
 
 const int metaCharacters[] = {'.', '*', '(', ')', '[', ']', '{', '}', '|', '\\', 0};
@@ -252,7 +252,11 @@ IntVector *getIntArrayFromUtf8(char *regexExpress) {
     return intArray;
 }
 int dealDefiniteRepeat(IntVector *intArray, int pos, SymbolTable *st) {
-
+    AutoMaton *am = initAutoMaton();
+    Status *s = initStatus();
+    for (int i = 0; i < 6; i++) {
+        APPEND_NEW_STATUS(am);
+    }
     
     /*
     int i = pos;
