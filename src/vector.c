@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-Vector *initVector(int VectorSize, int typeSize, assignFunction assign) {
+Vector *initVector(int VectorSize, int typeSize, assignFunction assign, freeFunction freeAssign){
     Vector *v = malloc(sizeof(Vector));
     if (v == NULL) {
         return NULL;
@@ -11,6 +11,7 @@ Vector *initVector(int VectorSize, int typeSize, assignFunction assign) {
         v->typeSize = typeSize;
         v->dataSize = 0;
         v->assign = assign;
+        v->freeAssign;
         v->vector = malloc(typeSize * VectorSize);
         if (v->vector == NULL) {
             free(v);
@@ -25,9 +26,19 @@ void freeVector(Vector *v) {
     if (v == NULL)
         return;
     else if (v->allocSize != 0) {
-        free(v->vector);
+        for (int i = 0; i < v->dataSize;i++){
+            (*(v->freeAssign))(v->vector + i*v->typeSize);
+        }
+            free(v->vector);
     }
     free(v);
+}
+
+void clearVecter(Vector *v){
+    for (int i = 0; i < v->dataSize; i++) {
+        (*(v->freeAssign))(v->vector + i * v->typeSize);
+    }
+    v->dataSize = 0;
 }
 
 int appendVector(Vector *v, void *element) {
@@ -68,7 +79,7 @@ int getVectorSize(Vector *v) {
 }
 
 Vector *copyVector(Vector *v) {
-    Vector *tmp = initVector(v->allocSize, v->typeSize, v->assign);
+    Vector *tmp = initVector(v->allocSize, v->typeSize, v->assign,v->freeAssign);
     if (tmp == NULL) {
         return NULL;
     } else {
@@ -78,9 +89,6 @@ Vector *copyVector(Vector *v) {
     }
 }
 /*直接返回地址*/
-void *getVector(Vector *v) {
-    return v->vector;
-}
 void *getReferenceVector(Vector *v, int pos) {
     return &(((unsigned char *)(v->vector))[pos * (v->typeSize)]);
 }
@@ -99,9 +107,9 @@ int exchangePositionVector(Vector *v, int pos1, int pos2) {
         return -1;
     } else {
         void *tmp = malloc(v->typeSize);
-        memcpy(tmp, &(v->vector[pos1]), v->typeSize);
-        memcpy(&(v->vector[pos1]), &(v->vector[pos2]), v->typeSize);
-        memcpy(&(v->vector[pos2]), tmp, v->typeSize);
+        memcpy(tmp, v->vector + pos1 * v->typeSize, v->typeSize);
+        memcpy(v->vector + pos1 * v->typeSize, v->vector + pos2 * v->typeSize, v->typeSize);
+        memcpy(v->vector + pos2 * v->typeSize, tmp, v->typeSize);
         /*
         (*(v->assign))(tmp, &(v->vector[pos1]));
         (*(v->assign))(&(v->vector[pos1]), &(v->vector[pos2]));

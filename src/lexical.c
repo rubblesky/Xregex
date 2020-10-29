@@ -251,13 +251,49 @@ IntVector *getIntArrayFromUtf8(char *regexExpress) {
     }
     return intArray;
 }
+
+static int setLongCharArrayByChar(LongChar *ls, int lsSize, unsigned char *s) {
+    int i;
+    for (i = 0; s[i] != '\0' && i < lsSize; i++) {
+        ls[i] = s[i];
+    }
+    if (i == lsSize) {
+        return -1;
+    } else {
+        return i;
+    }
+}
+static void addEdge(AutoMaton *am,int start ,int end,enum MatchMode matchMode,char *s){
+    LongChar matchContent[50];
+    int size = setLongCharArrayByChar(matchContent, 50, s);
+    Match *m = initMatch(SEQUENCE, matchContent, 5);
+    setMatch(m, matchMode, matchContent, size);
+    appendEdgeByIndex(am, 1, 1, m);
+    free(m);
+}
+
 int dealDefiniteRepeat(IntVector *intArray, int pos, SymbolTable *st) {
     AutoMaton *am = initAutoMaton();
-    Status *s = initStatus();
-    for (int i = 0; i < 6; i++) {
-        APPEND_NEW_STATUS(am);
+    Status *s = initStatus(0);
+    for (int i = 0; i < 5; i++) {
+        appendStatus(am,s);
     }
-    
+    setFinalStatus(s, 1);
+    appendStatus(am, s);
+    free(s);
+
+    addEdge(am, 0, 1, SEQUENCE, "{");
+    addEdge(am, 1, 1, SEQUENCE, "\n\r\t ");
+    addEdge(am, 1, 2, RANGE, "09");
+    addEdge(am, 1, 3, SEQUENCE, ",");
+    addEdge(am, 2, 2, SEQUENCE, "\n\r\t ");
+    addEdge(am, 2, 3, SEQUENCE, ",");
+    addEdge(am, 3, 3, SEQUENCE, "\n\t\r ");
+    addEdge(am, 3, 4, RANGE, "09");
+    addEdge(am, 3, 5, SEQUENCE, "}");
+    addEdge(am, 4, 4, SEQUENCE, "\n\r\t ");
+    addEdge(am, 4, 5, SEQUENCE, "}");
+    addEdge(am, 2, 5, SEQUENCE, "}");
     /*
     int i = pos;
     if (getIntVectorData(intArray, i) != '{') {

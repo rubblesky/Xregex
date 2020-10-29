@@ -4,23 +4,28 @@
 
 #include "vector.h"
 typedef struct Status Status;
-enum matchMode {
+enum MatchMode {
     SEQUENCE,
     RANGE,
     REGEX,
-    
+
 };
+typedef struct Match{
+    Vector *matchContent;
+    enum MatchMode matchMode;
+} Match;
 typedef struct Edge {
     Status *start;
     Status * end;
-    Vector * matchContent;
-    enum matchMode matchMode;
+    Match *match;
 
 } Edge;
 
 struct Status {
-    Vector **outEdge;
-    Vector **inEdge;
+    /*type : Edge**/
+    Vector *outEdge;
+    Vector *inEdge;
+    int isFinalStatus;
 };
 
 typedef struct AutoMaton {
@@ -28,15 +33,22 @@ typedef struct AutoMaton {
     Vector *edge;
 } AutoMaton;
 
-Edge *initEdge(Status *start, Status *end, Vector *matchContent, enum matchMode matchMode);
+typedef int LongChar;
+Match *initMatch(enum MatchMode matchMode, LongChar *matchContent, int size);
+void setMatch(Match *m, enum MatchMode matchMode, LongChar *matchContent, int size);
+void freeMatch(Match *m);
+//void setMatchMode(Match *m, enum MatchMode matchMode);
+//int setMatchContent(Match *m, Vector *matchContent);
+Edge *initEdge(Status *start, Status *end, Match *match);
 void freeEdge(Edge *e);
-Status *initStatus();
+Status *initStatus(int isFinalStatus);
 void freeStatus(Status *s);
+void setFinalStatus(Status *s, int isFinalStatus);
 AutoMaton *initAutoMaton();
 void freeAutoMaton(AutoMaton *am);
 #define APPEND_NEW_STATUS(autoMaton) appendStatus(autoMaton, NULL)
 int appendStatus(AutoMaton *am, Status *s);
 int appendEdge(AutoMaton *am, Edge *e);
-int appendEdgeByIndex(AutoMaton *am, int start, int end, Vector *matchContent, enum matchMode matchMode);
+int appendEdgeByIndex(AutoMaton *am, int start, int end, Match *match);
 int deleteEdge(AutoMaton *am, Edge *e);
 #endif

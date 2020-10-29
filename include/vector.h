@@ -2,7 +2,7 @@
 #define VECTOR_H
 
 typedef void (*assignFunction)(void *assignedValue, void *fromValue);
-
+typedef void (*freeFunction)(void *element);
 typedef struct Vector {
     void *vector;
     int typeSize;
@@ -10,16 +10,18 @@ typedef struct Vector {
     int allocSize;
     /*对于复杂结构 这应该是一个深度复制函数*/
     assignFunction assign;
+    /*用于释放assign使用的内存*/
+    freeFunction freeAssign;
 } Vector;
-#define INIT_VECTOR(size,type,assignFunction) initVector(size,sizeof(type),assignFunction)
-Vector *initVector(int VectorSize, int typeSize, assignFunction assign);
+#define INIT_VECTOR(size, type, assignFunction, freeAssignFunction) initVector(size, sizeof(type), assignFunction, freeAssignFunction)
+Vector *initVector(int VectorSize, int typeSize, assignFunction assign, freeFunction freeAssign);
 void freeVector(Vector *v);
+void clearVecter(Vector *v);
 int appendVector(Vector *v, void *element);
 int setValueVector(Vector *v, int pos, void *value);
 int getValueVector(Vector *v, int pos, void *value);
 int getVectorSize(Vector *v);
 Vector *copyVector(Vector *v);
-void *getVector(Vector *v);
 void *getReferenceVector(Vector *v, int pos);
 int deleteLastElement(Vector *v);
 int exchangePositionVector(Vector *v, int pos1, int pos2);
