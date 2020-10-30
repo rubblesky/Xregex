@@ -107,9 +107,9 @@ int exchangePositionVector(Vector *v, int pos1, int pos2) {
         return -1;
     } else {
         void *tmp = malloc(v->typeSize);
-        memcpy(tmp, v->vector + pos1 * v->typeSize, v->typeSize);
-        memcpy(v->vector + pos1 * v->typeSize, v->vector + pos2 * v->typeSize, v->typeSize);
-        memcpy(v->vector + pos2 * v->typeSize, tmp, v->typeSize);
+        memcpy(tmp, (unsigned char *)(v->vector) + pos1 * v->typeSize, v->typeSize);
+        memcpy((unsigned char *)(v->vector) + pos1 * v->typeSize, (unsigned char *)(v->vector) + pos2 * v->typeSize, v->typeSize);
+        memcpy((unsigned char *)(v->vector) + pos2 * v->typeSize, tmp, v->typeSize);
         /*
         (*(v->assign))(tmp, &(v->vector[pos1]));
         (*(v->assign))(&(v->vector[pos1]), &(v->vector[pos2]));
