@@ -11,7 +11,7 @@ Vector *initVector(int VectorSize, int typeSize, assignFunction assign, freeFunc
         v->typeSize = typeSize;
         v->dataSize = 0;
         v->assign = assign;
-        v->freeAssign;
+        v->freeAssign = freeAssign;
         v->vector = malloc(typeSize * VectorSize);
         if (v->vector == NULL) {
             free(v);
@@ -57,8 +57,8 @@ int appendVector(Vector *v, void *element) {
 }
 
 int setValueVector(Vector *v, int pos, void *value) {
-    if (pos > 0 && pos < v->dataSize) {
-        (*v->assign)(&(((unsigned char *)(v->vector))[pos * (v->typeSize)]), value);
+    if (pos >= 0 && pos < v->dataSize) {
+        (*v->assign)( (unsigned char *)(v->vector) + pos * v->typeSize, value);
         return 0;
     } else {
         return -1;
@@ -66,8 +66,8 @@ int setValueVector(Vector *v, int pos, void *value) {
 }
 
 int getValueVector(Vector *v, int pos, void *value) {
-    if (pos > 0 && pos < v->dataSize) {
-        (*v->assign)(&(((unsigned char *)(v->vector))[pos * (v->typeSize)]), value);
+    if (pos >= 0 && pos < v->dataSize) {
+        (*v->assign)(value,(unsigned char *)(v->vector) + pos * v->typeSize);
         return 0;
     } else {
         return -1;
@@ -90,11 +90,16 @@ Vector *copyVector(Vector *v) {
 }
 /*直接返回地址*/
 void *getReferenceVector(Vector *v, int pos) {
-    return &(((unsigned char *)(v->vector))[pos * (v->typeSize)]);
+    void * r = ((unsigned char *)(v->vector)) + pos * (v->typeSize);
+    if(!isInVector(v,r)){
+        return NULL;
+    }
+    return r;
 }
 
 int deleteLastElement(Vector *v) {
     if (v->dataSize > 0) {
+        (*v->freeAssign)(v->vector + (v->dataSize - 1) * v->typeSize);
         v->dataSize--;
         return 0;
     } else {

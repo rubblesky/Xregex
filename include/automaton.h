@@ -8,6 +8,7 @@ enum MatchMode {
     SEQUENCE,
     RANGE,
     REGEX,
+    FUNCTION,
 
 };
 typedef struct Match{
@@ -51,4 +52,5 @@ int appendStatus(AutoMaton *am, Status *s);
 int appendEdge(AutoMaton *am, Edge *e);
 int appendEdgeByIndex(AutoMaton *am, int start, int end, Match *match);
 int deleteEdge(AutoMaton *am, Edge *e);
+int runAutoMation(AutoMaton *am, int start, int *s);
 #endif

@@ -268,7 +268,7 @@ static void addEdge(AutoMaton *am,int start ,int end,enum MatchMode matchMode,ch
     int size = setLongCharArrayByChar(matchContent, 50, s);
     Match *m = initMatch(SEQUENCE, matchContent, 5);
     setMatch(m, matchMode, matchContent, size);
-    appendEdgeByIndex(am, 1, 1, m);
+    appendEdgeByIndex(am, start, end, m);
     free(m);
 }
 
@@ -280,7 +280,7 @@ int dealDefiniteRepeat(IntVector *intArray, int pos, SymbolTable *st) {
     }
     setFinalStatus(s, 1);
     appendStatus(am, s);
-    free(s);
+    freeStatus(s);
 
     addEdge(am, 0, 1, SEQUENCE, "{");
     addEdge(am, 1, 1, SEQUENCE, "\n\r\t ");
@@ -294,6 +294,8 @@ int dealDefiniteRepeat(IntVector *intArray, int pos, SymbolTable *st) {
     addEdge(am, 4, 4, SEQUENCE, "\n\r\t ");
     addEdge(am, 4, 5, SEQUENCE, "}");
     addEdge(am, 2, 5, SEQUENCE, "}");
+    int r = runAutoMation(am, 0, intArray->vector + pos);
+    freeAutoMaton(am);
     /*
     int i = pos;
     if (getIntVectorData(intArray, i) != '{') {
