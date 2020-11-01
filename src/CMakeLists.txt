@@ -1,4 +1,4 @@
-set(SRC_LIST "xregex.c" "stack.c" "vector.c" "automaton.c")
+set(SRC_LIST "xregex.c" "stack.c" "vector.c" "automaton2.c")
 #"lexical.c"
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 

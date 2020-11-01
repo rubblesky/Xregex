@@ -15,7 +15,6 @@ static void nothingToFree(void *x) {
     return;
 }
 Match *initMatch(enum MatchMode matchMode, LongChar *matchContent, int size) {
-
     Match *m = malloc(sizeof(Match));
     if (m == NULL) {
         return NULL;
@@ -28,7 +27,7 @@ Match *initMatch(enum MatchMode matchMode, LongChar *matchContent, int size) {
         return m;
     }
 }
-static Match *copyMatch(Match *m){
+static Match *copyMatch(Match *m) {
     return initMatch(m->matchMode, m->matchContent->vector, m->matchContent->dataSize);
 }
 
@@ -120,7 +119,6 @@ static void EdgeAssign(Edge *edge, Edge *fromEdge) {
     edge->start = fromEdge->start;
     edge->end = fromEdge->end;
     edge->match = copyMatch(fromEdge->match);
-
 }
 static void freeEdgeAssign(Edge *e) {
     freeMatch(e->match);
@@ -217,9 +215,9 @@ static int isMatch(Match *m, int c) {
         case RANGE: {
             int start, end;
             getValueVector(m->matchContent, 0, &start);
-            getValueVector(m->matchContent, 0, &end);
+            getValueVector(m->matchContent, 1, &end);
             for (int i = start; i <= end; i++) {
-                if (c = i) {
+                if (c == i) {
                     return 1;
                 }
             }
@@ -232,21 +230,25 @@ static int isMatch(Match *m, int c) {
             break;
     }
 }
+
 int runAutoMation(AutoMaton *am, int start, int *s) {
     Status *nowStatus = getReferenceVector(am->status, start);
     int i;
     for (i = 0; s[i] != '\0'; i++) {
         int j = 0;
         Edge *e = NULL;
-        while (getValueVector(nowStatus->outEdge, j,&e) == 0 \
-        && !isMatch(e->match,s[i])) {
+        while (getValueVector(nowStatus->outEdge, j, &e) == 0 && !isMatch(e->match, s[i])) {
             j++;
         }
-        if(j == getVectorSize(nowStatus->outEdge)){
+        if (j == getVectorSize(nowStatus->outEdge)) {
             return -1;
-        }else{
+        } else {
             nowStatus = e->end;
         }
     }
-    return i;
+    if (nowStatus->isFinalStatus) {
+        return i;
+    } else {
+        return -1;
+    }
 }

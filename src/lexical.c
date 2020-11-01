@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "automaton.h"
 #include "xregex.h"
 #define LEXICAL_ERROR_DISPLAY 10
 
@@ -251,7 +250,7 @@ IntVector *getIntArrayFromUtf8(char *regexExpress) {
     }
     return intArray;
 }
-
+/*
 static int setLongCharArrayByChar(LongChar *ls, int lsSize, unsigned char *s) {
     int i;
     for (i = 0; s[i] != '\0' && i < lsSize; i++) {
@@ -271,8 +270,9 @@ static void addEdge(AutoMaton *am,int start ,int end,enum MatchMode matchMode,ch
     appendEdgeByIndex(am, start, end, m);
     free(m);
 }
-
+*/
 int dealDefiniteRepeat(IntVector *intArray, int pos, SymbolTable *st) {
+    /*
     AutoMaton *am = initAutoMaton();
     Status *s = initStatus(0);
     for (int i = 0; i < 5; i++) {
@@ -296,56 +296,7 @@ int dealDefiniteRepeat(IntVector *intArray, int pos, SymbolTable *st) {
     addEdge(am, 2, 5, SEQUENCE, "}");
     int r = runAutoMation(am, 0, intArray->vector + pos);
     freeAutoMaton(am);
-    /*
-    int i = pos;
-    if (getIntVectorData(intArray, i) != '{') {
-        return 0;
-    } else {
-        i++;
-        int c;
-        int isEnd = 0;
-        Symbol tmp;
-        tmp.value = initIntVector(5);
-        int hasComma = 0;
-        while ((c = getIntVectorData(intArray, i)) != '\0' && !isEnd) {
-            if (c == ' ') {
-                continue;
-            } else if (c >= '0' && c <= '9' && getIntVectorDataSize(tmp.value) <= 2) {
-                int num = 0;
-                while (c >= '0' && c <= '9') {
-                    num *= 10;
-                    num += c - '0';
-                    i++;
-                    c = getIntVectorData(intArray, i);
-                }
-                appendIntVector(tmp.value, num);
-                num = 0;
-            } else if (c == ',') {
-                int arraySize = getIntVectorDataSize(tmp.value);
-                if (arraySize == 1) {
-                    continue;
-                } else if (arraySize == 0) {
-                    appendIntVector(tmp.value, 0);
-                    continue;
-                } else {
-                    lexicalError(intArray, i, "多余的逗号：");
-                }
-            } else if (c == '}') {
-                break;
-            } else {
-                lexicalError(intArray, i, "不合法的字符：");
-            }
-            i++;
-        }
-
-        if (getIntVectorDataSize(tmp.value) == 1) {
-            appendIntVector(tmp.value, getIntVectorData(tmp.value, 0));
-        }
-        appendSymbol(st, &tmp);
-        freeIntVector(tmp.value);
-    }
-
-    return i - pos;
+    return r;
 */
 }
 

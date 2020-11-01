@@ -4,7 +4,7 @@
 #define FORCE 1
 #define RESTRICT 2
 #define RECURSIVE 3
-
+typedef int LongChar;
 void dealError(int exitStauts,const char *errorPosition, char *msg);
 #define DEAL_ERRER(exitStauts, msg) dealError(exitStauts, __FUNCTION__, msg)
 /*

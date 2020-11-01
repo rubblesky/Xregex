@@ -33,7 +33,6 @@ typedef struct AutoMaton {
     Vector *status;
     Vector *edge;
 } AutoMaton;
-
 typedef int LongChar;
 Match *initMatch(enum MatchMode matchMode, LongChar *matchContent, int size);
 void setMatch(Match *m, enum MatchMode matchMode, LongChar *matchContent, int size);

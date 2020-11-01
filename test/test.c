@@ -229,45 +229,50 @@ void testDealDefiniteRepeat(CuTest *tc) {
     char re[] = "{1,2}";
     IntVector *iv = getIntArrayFromUtf8(re);
     SymbolTable *st = initSymbolTable(5);
-    dealDefiniteRepeat(iv, 0, st);
-    CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
-    CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
+    int i = dealDefiniteRepeat(iv, 0, st);
+    CuAssertTrue(tc, i >= 0);
+    //CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
+    //CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
     freeIntVector(iv);
     freeSymbolTable(st);
 
     char re1[] = "{1}";
     iv = getIntArrayFromUtf8(re1);
     st = initSymbolTable(5);
-    dealDefiniteRepeat(iv, 0, st);
-    CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
-    CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[1]);
+    i = dealDefiniteRepeat(iv, 0, st);
+    CuAssertTrue(tc, i >= 0);
+    //CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
+    //CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[1]);
     freeIntVector(iv);
     freeSymbolTable(st);
 
     char re2[] = "{1,}";
     iv = getIntArrayFromUtf8(re2);
     st = initSymbolTable(5);
-    dealDefiniteRepeat(iv, 0, st);
-    CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
-    CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
+    i = dealDefiniteRepeat(iv, 0, st);
+    CuAssertTrue(tc, i >= 0);
+    //CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
+    //CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
     freeIntVector(iv);
     freeSymbolTable(st);
 
     char re3[] = "{,2}";
     iv = getIntArrayFromUtf8(re3);
     st = initSymbolTable(5);
-    dealDefiniteRepeat(iv, 0, st);
-    CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
-    CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
+    i = dealDefiniteRepeat(iv, 0, st);
+    CuAssertTrue(tc, i >= 0);
+    //CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
+    //CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
     freeIntVector(iv);
     freeSymbolTable(st);
 
     char re4[] = "{1,1,2}";
     iv = getIntArrayFromUtf8(re4);
     st = initSymbolTable(5);
-    dealDefiniteRepeat(iv, 0, st);
-    CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
-    CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
+    i = dealDefiniteRepeat(iv, 0, st);
+    CuAssertTrue(tc, i < 0);
+    //CuAssertIntEquals(tc, 1, st[0].symbol->value->vector[0]);
+    //CuAssertIntEquals(tc, 2, st[0].symbol->value->vector[1]);
     freeIntVector(iv);
     freeSymbolTable(st);
 }
