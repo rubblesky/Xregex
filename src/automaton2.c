@@ -4,7 +4,10 @@
 
 #include "vector.h"
 #define DEFAULE_MATCH_CONTENT_SIZE 10
+/*空串使用Mode还是Content表示？*/
+#define EMPTY_STRING -1
 typedef int LongChar;
+
 enum MatchMode {
     /*这里要改 不允许出现sequence 一律拆分成多条边
     range最大值和最小值不能相同*/
@@ -78,18 +81,14 @@ AutoMaton *freeAutoMaton(AutoMaton *am) {
     freeVector(am->status);
     free(am);
 }
-/*这里也不对呀  应该是match才对*/
-void EdgeAssign(Edge *edge, Edge *fromEdge) {
-    edge->nextEdge = fromEdge->nextEdge;
-    edge->match.matchContent = copyVector(fromEdge->match.matchContent);
-    edge->match.matchMode = fromEdge->match.matchMode;
-    edge->point = fromEdge->point;
+void MatchContentAssign(LongChar *character, LongChar *fromCharacter) {
+    *character = *fromCharacter;
 }
 
-void freeEdgeAssign(Edge *e) {
-    freeVector(e->match.matchContent);
+void freeMatchContentAssign(LongChar *match) {
+    return;
 }
-
+/*使用LongChar数组作为参数是否能简化程序？*/
 int setMatch(Match *match, enum MatchMode matchMode, LongChar *matchContent) {
     match->matchMode = matchMode;
     if (match->matchContent != NULL) {
@@ -97,12 +96,23 @@ int setMatch(Match *match, enum MatchMode matchMode, LongChar *matchContent) {
     } else {
         ;
     }
-    /*这里也要改*/
-    match->matchContent = INIT_VECTOR(DEFAULE_MATCH_CONTENT_SIZE, LongChar, EdgeAssign, freeEdgeAssign);
-    return match->matchContent == NULL ? -1 : 0;
+    if (matchContent == NULL) {
+        return 0;
+    } else {
+        /*是否有更好的办法*/
+        int i;
+        for (int i = 0; matchContent[i] != 0; i++)
+            ;
+        match->matchContent = INIT_VECTOR(i + 1, LongChar, MatchContentAssign, freeMatchContentAssign);
+        if (match->matchContent == NULL) {
+            return -1;
+        } else {
+            /*此处为通过LongChar数组为Vector赋值 还未完成*/
+        }
+    }
 }
 
-Edge *initEdge(enum MatchMode matchMode, LongChar *matchContent,int point) {
+Edge *initEdge(enum MatchMode matchMode, LongChar *matchContent, int point) {
     Edge *e = malloc(sizeof(Edge));
     if (e == NULL) {
         return NULL;
@@ -122,14 +132,18 @@ void freeEdge(Edge *e) {
     free(e);
 }
 
-int addStatus(AutoMaton *am) {
-    Status s = {NULL};
-    return appendVector(am->status, &s);
+int addStatus(AutoMaton *am, int isEnd, int isStart) {
+    Status s = {NULL, isEnd};
+    int r = appendVector(am->status, &s);
+    if (isStart && r >= 0) {
+        am->start = getReferenceVector(am->status, r);
+    }
+    return r;
 }
-int addEdge(AutoMaton *am, int start, int end, enum MatchMode matchMode, LongChar MatchContent,int point) {
+int addEdge(AutoMaton *am, int start, int end, enum MatchMode matchMode, LongChar MatchContent, int point) {
     Status *s = getReferenceVector(am->status, start);
     if (s->outEdge == NULL) {
-        s->outEdge = initEdge(matchMode, MatchContent,point);
+        s->outEdge = initEdge(matchMode, MatchContent, point);
         if (s->outEdge == NULL) {
             return -1;
         } else {
@@ -141,7 +155,7 @@ int addEdge(AutoMaton *am, int start, int end, enum MatchMode matchMode, LongCha
         while (e->nextEdge != NULL) {
             e = e->nextEdge;
         }
-        e->nextEdge = initEdge(matchMode, MatchContent,point);
+        e->nextEdge = initEdge(matchMode, MatchContent, point);
         if (e->nextEdge == NULL) {
             return -1;
         } else {
@@ -150,5 +164,15 @@ int addEdge(AutoMaton *am, int start, int end, enum MatchMode matchMode, LongCha
     }
 }
 
-int removeEdge() {
+AutoMaton *NFA2DFA(AutoMaton *NFA) {
+    AutoMaton *DFA = initAutoMaton(getVectorSize(NFA->status));
+    Edge *e = NFA->start->outEdge;
+    if (e == NULL) {
+        addStatus(DFA, 1, 1);
+        return DFA;
+    }
+    while (e->nextEdge != NULL) {
+        if (e->match.matchMode)
+            e = e->nextEdge;
+    }
 }
