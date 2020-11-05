@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define EMPTY_STRING -128
+
 #define FIRST_BIT (0x80)       //1000 0000b
 #define FIRST_TWO_BITS (0xc0)  //1100 0000b
 #define LAST_SIX_BITS (0x3f)   //0011 1111b
@@ -90,71 +92,6 @@ int intToUtf8(int number, char *result) {
     }
 }
 
-IntVector *initIntVector(int size) {
-    IntVector *iv = malloc(sizeof(IntVector));
-    iv->allocSize = size;
-    iv->dataSize = 0;
-    iv->vector = malloc(sizeof(int) * size);
-    if (iv->vector == NULL) {
-        DEAL_ERRER(-1, "malloc failed\n");
-    }
-    return iv;
-}
-void appendIntVector(IntVector *iv, int data) {
-    if (iv->dataSize == iv->allocSize) {
-        iv->allocSize *= 2;
-        int *tmp = realloc(iv->vector, sizeof(int) * iv->allocSize);
-        if (tmp == NULL) {
-            DEAL_ERRER(-1, "realloc failed\n");
-        } else {
-            iv->vector = tmp;
-        }
-    } else {
-        ;
-    }
-    iv->vector[iv->dataSize] = data;
-    iv->dataSize++;
-}
-
-int getIntVectorDataSize(IntVector *iv) {
-    return iv->dataSize;
-}
-
-int getIntVectorData(IntVector *iv, int position) {
-    if (position >= 0 && position < iv->dataSize) {
-        return iv->vector[position];
-    } else {
-        DEAL_ERRER(-2, "vector out of size\n");
-    }
-}
-void setIntVectorData(IntVector *iv, int position, int data) {
-    if (position > 0 && position < iv->dataSize) {
-        iv->vector[position] = data;
-    } else {
-        DEAL_ERRER(-2, "vector out of size\n");
-    }
-}
-
-IntVector *copyIntVector(IntVector *iv){
-    /*复制构造函数*/
-    IntVector *ivCopy = initIntVector(iv->allocSize);
-    ivCopy->dataSize = iv->dataSize;
-    memcpy(ivCopy->vector, iv->vector, iv->dataSize *sizeof(int));
-    return ivCopy;
-}
-/*只删除数据 不释放内存*/
-void deleteIntVectorData(IntVector *iv) {
-    iv->dataSize = 0;
-}
-
-void freeIntVector(IntVector *iv) {
-    if (iv->allocSize > 0) {
-        free(iv->vector);
-        free(iv);
-    } else {
-        free(iv);
-    }
-}
 
 RepeatOption *initRepeatOption() {
     RepeatOption *ro = malloc(sizeof(RepeatOption));
@@ -253,135 +190,86 @@ XregexTree *getXregextTree(char *regexExpress) {
     analyzeRegexExpress(regexExpress, xn);
     return xt;
 }
+
+IntVector *preprocess(char *regexExpress);
+
+int unfoldRepeat(char *regexExpress, IntVector *iv);
 int analyzeRegexExpress(char *regexExpress, XregexNode *xn) {
-    int c;
-    int size = utf8ToInt(regexExpress, &c);
-    //int isEscaped = 0;
-    IntVector *content = initIntVector(FIRST_ALLOC_CONENT_SIZE);
-    if (c = '\\') {
-        regexExpress += size;
-        size = utf8ToInt(regexExpress, &c);
-        appendIntVector(xn->content, c);
-    } else {
-        switch (c) {
+    IntVector* regex = preprocess(regexExpress);
+}
+
+IntVector *preprocess(char* regexExpress){
+    IntVector *iv = initIntVector(strlen(regexExpress));
+    int i;
+    while (0 != utf8ToInt(regexExpress++,&i) && i != 0){
+        if(i == '\\'){
+            if(0 == utf8ToInt(&i,regexExpress++) || 0 == i){
+                break;
+            }else{
+                /*预处理器不负责纠错 由此出现奇怪的bug一律看作特性或UB*/
+                /* 
+                \n之类的转义字符不用考虑 
+                但是如果需要处理\b \w 这样原来 ASCII未定义的字符就要小心了 没准对C语言来说是UB
+                */
+                appendIntVector(iv, i);
+            }
+        }else if(i == '{'){
+            unfoldRepeat(regexExpress - 1, iv);
+        }else {
+            switch (i)
+            {
             case '(':
-                
+            case ')':
+            case '[':
+            case ']':
+            case '*':
+                appendIntVector(iv, -i);
                 break;
             default:
+                appendIntVector(iv, i);
                 break;
+            }
         }
+        
     }
+}
 
-    /*
-    while (c != 0) {
-        if (c == '\\') {
-            isEscaped = 1;
-            regexExpress += size;
-            size = utf8ToInt(regexExpress, &c);
+int unfoldRepeat(char* regexExpress,IntVector *iv){
+    int i = getIntVectorData(iv, -1);
+    int start = -2, end = -2;
+    if (')' == i) {
+        int tmp;
+        while('(' != getIntVectorData(iv,start)){
+            start--;
+        }
+        start += 1;
+    } else if (']' == i) {
+        while ('[' != getIntVectorData(iv, start)) {
+            start--;
+        }
+        start += 1;
+    } else {
+        ;
+    }
+    int times[2];
+    int *tp = &times;
+    for (char *r = regexExpress; *r != '}' && r != '\0'; r++) {
+        int n = 0;
+        if (*r == ',') {
+            if (tp == times) {
+                *tp++ = n;
+            } else {
+                /*error*/
+            }
+        } else if (*r >= '0' && *r <= '9') {
+            n *= 10;
+            n += *r - '0';
+        } else if (*r == ' ' || *r == '\t') {
+            /*换行符和回车符都视为错误吧 空格不会中断数字*/
             continue;
         } else {
-            if (isEscaped == 1) {
-                isEscaped = 0;
-                switch (c) {
-                    case '(':
-                        break;
-                    case ')':
-                        break;
-                    case '[':
-                        break;
-                    case ']':
-                        break;
-                    case '*':
-                        break;
-                    case '|':
-                        break;
-                    default:
-                        appendIntVector(content, c);
-                        break;
-                }
-            }
-            else{
-                appendIntVector(content, c);
-            }
-        }
-
-        regexExpress += size;
-        size = utf8ToInt(regexExpress, &c);
-    }
-    */
-}
-XregexNode *priority(char *regexExpress) {
-}
-
-int matchParentheses(char *regexExpress);
-/*
-enum regexNodeAttr childNodeAttr(char *regexExpress) {
-    int c;
-    int size = utf8ToInt(regexExpress, &c);
-    if (c == '(') {
-        regexExpress += matchBrockets(regexExpress,'(' ,')');
-    } else if (c == '[') {
-        regexExpress += matchBrockets(regexExpress, '[', ']');
-    } else if(c == '\\'){
-        regexExpress += size;
-        regexExpress += utf8ToInt(regexExpress,&c);
-    }else{
-        regexExpress += size;
-    }
-
-    do{
-        size = utf8ToInt(regexExpress, &c);
-        regexExpress += size;
-        if(c == '*'){
-            
+            /*error*/
         }
     }
+    /*接下来进行展开 等到语法设计出来之后再写*/
 }
-
-
-int matchBrockets(char *regexExpress,char leftBrocket, char rightBrocket){
-
-    int c;
-    int size = utf8ToInt(regexExpress, &c);
-    int sizeSummation = size;
-    int isEscaped = 0;
-    if (c != leftBrocket) {
-        return -1;
-    } else {
-        int isNotMatched = 1;
-        while (c != 0 && isNotMatched) {
-            size = utf8ToInt(regexExpress, &c);
-            if (c == '\\' && !isEscaped) {
-                isEscaped = 1;
-                regexExpress += size;
-                sizeSummation += size;
-                continue;
-            }
-
-            if (c == leftBrocket && !isEscaped) {
-                isNotMatched++;
-            } else if (c == rightBrocket && !isEscaped) {
-                isNotMatched--;
-            } else {
-                ;
-            }
-
-            if (isEscaped) {
-                isEscaped = !isEscaped;
-            }
-
-            regexExpress += size;
-            sizeSummation += size;
-        }
-    }
-
-    return sizeSummation;
-}
-*/
-typedef struct XregexRule{
-    /*终结符是正数 非终结符是负数*/
-    int ruleLeftSide;
-    int **ruleRightSide;
-    int ruleNum;
-    int allocSize;
-} XregexRule;

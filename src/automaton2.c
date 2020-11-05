@@ -3,18 +3,16 @@
 #include <stdlib.h>
 
 #include "vector.h"
-#define DEFAULE_MATCH_CONTENT_SIZE 10
-/*空串使用Mode还是Content表示？*/
-#define EMPTY_STRING -1
+#define DEFAULE_MATCH_CONTENT_SIZE 2
 typedef int LongChar;
 
 enum MatchMode {
-    /*这里要改 不允许出现sequence 一律拆分成多条边
-    range最大值和最小值不能相同*/
-    SEQUENCE,
-    RANGE,
-    REGEX,
-    FUNCTION,
+    /*range最大值和最小值不能相同*/
+    SINGLE_CHAR,        /*单个字符*/
+    RANGE,              /*范围*/
+    EMPTY_STRING,       /*空串*/
+    ANONYMOUS_CAPTURE,  /*匿名捕获*/
+    /*贪婪匹配  命名捕获    回溯引用*/
 };
 
 typedef struct Match Match;
@@ -163,7 +161,7 @@ int addEdge(AutoMaton *am, int start, int end, enum MatchMode matchMode, LongCha
         }
     }
 }
-
+/*未完成*/
 AutoMaton *NFA2DFA(AutoMaton *NFA) {
     AutoMaton *DFA = initAutoMaton(getVectorSize(NFA->status));
     Edge *e = NFA->start->outEdge;
