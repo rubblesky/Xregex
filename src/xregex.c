@@ -6,6 +6,10 @@
 #include <string.h>
 
 #define EMPTY_STRING -128
+#define ANONYMOUS_CAPTURE_LEFT -129  /*(:*/
+#define ANONYMOUS_CAPTURE_RIGHT -130 /*:)*/
+#define NAMED_CAPTURE_LEFT -131      /*(=*/
+#define NAMED_CAPTURE_RIGHT -132     /*=)*/
 
 #define FIRST_BIT (0x80)       //1000 0000b
 #define FIRST_TWO_BITS (0xc0)  //1100 0000b
@@ -91,7 +95,6 @@ int intToUtf8(int number, char *result) {
         return 0;
     }
 }
-
 
 RepeatOption *initRepeatOption() {
     RepeatOption *ro = malloc(sizeof(RepeatOption));
@@ -192,84 +195,294 @@ XregexTree *getXregextTree(char *regexExpress) {
 }
 
 IntVector *preprocess(char *regexExpress);
-
-int unfoldRepeat(char *regexExpress, IntVector *iv);
+IntVector *getRegexVector(char *regexExpress);
+IntVector *dealMetacharacter(IntVector *regexVector);
+int unfoldRepeat(IntVector *regexVector);
 int analyzeRegexExpress(char *regexExpress, XregexNode *xn) {
-    IntVector* regex = preprocess(regexExpress);
+    IntVector *regex = preprocess(regexExpress);
 }
 
-IntVector *preprocess(char* regexExpress){
-    IntVector *iv = initIntVector(strlen(regexExpress));
+IntVector *preprocess(char *regexExpress) {
+    IntVector *rv = getRegexVector(regexExpress);
+    rv = dealMetacharacter(rv);
+    unfoldRepeat(rv);
+}
+
+IntVector *getRegexVector(char *regexExpress) {
+    IntVector *regexVector = initIntVector(strlen(regexExpress));
     int i;
-    while (0 != utf8ToInt(regexExpress++,&i) && i != 0){
-        if(i == '\\'){
-            if(0 == utf8ToInt(&i,regexExpress++) || 0 == i){
+    while (0 != utf8ToInt(regexExpress++, &i) && i != 0) {
+        if (i == '\\') {
+            if (0 == utf8ToInt(&i, regexExpress++) || 0 == i) {
                 break;
-            }else{
+            } else {
                 /*预处理器不负责纠错 由此出现奇怪的bug一律看作特性或UB*/
                 /* 
                 \n之类的转义字符不用考虑 
                 但是如果需要处理\b \w 这样原来 ASCII未定义的字符就要小心了 没准对C语言来说是UB
                 */
-                appendIntVector(iv, i);
+                appendIntVector(regexVector, i);
             }
-        }else if(i == '{'){
-            unfoldRepeat(regexExpress - 1, iv);
-        }else {
-            switch (i)
-            {
-            case '(':
-            case ')':
-            case '[':
-            case ']':
-            case '*':
-                appendIntVector(iv, -i);
-                break;
-            default:
-                appendIntVector(iv, i);
-                break;
+        } else {
+            switch (i) {
+                    /*先把它们设置为负值 处理元字符时还会调整*/
+                case '(':
+                case ')':
+                case '[':
+                case ']':
+                case '*':
+                case ':':
+                case '=':
+                case '^':
+                case '-':
+                    appendIntVector(regexVector, -i);
+                    break;
+                default:
+                    appendIntVector(regexVector, i);
+                    break;
             }
         }
-        
+    }
+    return regexVector;
+}
+
+void setNegative(IntVector *iv, int pos) {
+    /*这里其实应该加上错误处理的*/
+    int data = getIntVectorData(iv, pos);
+    if (data > 0) {
+        setIntVectorData(iv, pos, -data);
+    } else {
+        return;
     }
 }
 
-int unfoldRepeat(char* regexExpress,IntVector *iv){
-    int i = getIntVectorData(iv, -1);
-    int start = -2, end = -2;
-    if (')' == i) {
-        int tmp;
-        while('(' != getIntVectorData(iv,start)){
-            start--;
-        }
-        start += 1;
-    } else if (']' == i) {
-        while ('[' != getIntVectorData(iv, start)) {
-            start--;
-        }
-        start += 1;
+void setPositive(IntVector *iv, int pos) {
+    int data = getIntVectorData(iv, pos);
+    if (data < 0) {
+        setIntVectorData(iv, pos, -data);
     } else {
-        ;
+        return;
     }
-    int times[2];
-    int *tp = &times;
-    for (char *r = regexExpress; *r != '}' && r != '\0'; r++) {
-        int n = 0;
-        if (*r == ',') {
-            if (tp == times) {
-                *tp++ = n;
+}
+
+IntVector *dealMetacharacter(IntVector *regexVector) {
+    int data;
+    int isInBracket = 0;
+    for (int i = 0; data = getIntVectorData(regexVector, i); i++) {
+        if (data = -'[') {
+            isInBracket = 1;
+        } else if (data = -']') {
+            isInBracket = 0;
+        } else {
+            ;
+        }
+
+        if (isInBracket) {
+            switch (data) {
+                case -'(':
+                case -')':
+                case -'*':
+                case -':':
+                case -'=':
+                    setPositive(regexVector, i);
+            }
+        } else {
+            switch (data) {
+                case -'-':
+                case -'^':
+                    setPositive(regexVector, i);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+}
+
+static int getRepeatTimes(IntVector *iv, int start, int *max, int *min) {
+    /*max = 0 代表正无穷*/
+    int data;
+    if ((data = getIntVectorData(iv, start)) != -'{') {
+        DEAL_ERRER(-1, "unkown repeat start postion");
+    } else {
+        int times[2] = {0, 0};
+        int *tp = &times;
+        int isCut = 0, isCount = 0;
+        for (int i = start + 1; (data = getIntVectorData(iv, i)) != -'}'; i++) {
+            if (data = ',') {
+                if (tp == times) {
+                    tp++;
+                    isCount = 0;
+                    isCut = 0;
+                } else {
+                    /*error*/
+                }
+            } else if (data >= '0' && data <= '9' && !isCut) {
+                *tp *= 10;
+                *tp += data - '0';
+                isCount = 1;
+            } else if (isCount && (data == ' ' || data == '\t')) {
+                isCut = 1;
             } else {
                 /*error*/
             }
-        } else if (*r >= '0' && *r <= '9') {
-            n *= 10;
-            n += *r - '0';
-        } else if (*r == ' ' || *r == '\t') {
-            /*换行符和回车符都视为错误吧 空格不会中断数字*/
-            continue;
+        }
+        *min = times[0];
+        *max = times[1];
+        if (*max < *min && *max != 0) {
+            /*error*/
+        } else {
+            return 0;
+        }
+    }
+}
+static int getMatch(IntVector *iv, int end, const int left, const int right) {
+    int data;
+    int isNotMatch = 0;
+    int i;
+    for (i = end - 1; i >= 0 && !isNotMatch && i != end - 1; i--) {
+        data = getIntVectorData(iv, i);
+        if (data == right) {
+            isNotMatch++;
+        } else if (data == left) {
+            isNotMatch--;
+        }
+    }
+    return end - i - 1;
+}
+static int getRepeatScope(IntVector *iv, int end) {
+    int i = end - 1;
+    if (i < 0) {
+        return -1;
+        /*error*/
+    } else {
+        int data = getIntVectorData(iv, i);
+        switch (data) {
+            case -')':
+                return getMatch(iv, end, -'(', -')');
+            case -']':
+                return getMatch(iv, end, -'[', -']');
+            case ANONYMOUS_CAPTURE_RIGHT:
+                return getMatch(iv, end, ANONYMOUS_CAPTURE_LEFT, ANONYMOUS_CAPTURE_RIGHT);
+            case NAMED_CAPTURE_RIGHT:
+                return getMatch(iv, end, NAMED_CAPTURE_LEFT, NAMED_CAPTURE_RIGHT);
+            default:
+                if (data > 0) {
+                    return 1;
+                } else {
+                    /*error*/
+                    return -1;
+                }
+                break;
+        }
+    }
+}
+/*
+消除不与括号相连的 : 和 = 
+同时把与括号相连的按照语义添加到newregexVector中
+*/
+static int addFunction(IntVector *oldRegexVector, IntVector *newRegexVector, int pos) {
+    int data = getIntVectorData(oldRegexVector, pos);
+    int i = pos;
+    if ('(' == -data) {
+        if (i + 1 < getIntVectorDataSize(oldRegexVector)) {
+            data = getIntVectorData(oldRegexVector, i + 1);
+            if (':' == -data) {
+                i++;
+                appendIntVector(newRegexVector, ANONYMOUS_CAPTURE_LEFT);
+            } else if ('=' == -data) {
+                i++;
+                appendIntVector(newRegexVector, NAMED_CAPTURE_LEFT);
+            } else {
+                appendIntVector(newRegexVector, -'(');
+            }
         } else {
             /*error*/
         }
+    } else if (':' == -data) {
+        if (i + 1 < getIntVectorDataSize(oldRegexVector)) {
+            data = getIntVectorData(oldRegexVector, i - 1);
+            if (')' == -data) {
+                i++;
+                appendIntVector(newRegexVector, ANONYMOUS_CAPTURE_RIGHT);
+            } else {
+                /*添加正数*/
+                appendIntVector(newRegexVector, ':');
+            }
+        }
+    } else if ('=' == -data) {
+        if (i + 1 < getIntVectorDataSize(oldRegexVector)) {
+            data = getIntVectorData(oldRegexVector, i - 1);
+            if (')' == -data) {
+                i++;
+                appendIntVector(newRegexVector, NAMED_CAPTURE_RIGHT);
+            } else {
+                /*添加正数*/
+                appendIntVector(newRegexVector, '=');
+            }
+        }
+    } else {
+        return -1;
     }
-    /*接下来进行展开 等到语法设计出来之后再写*/
+    return i;
+}
+
+static void addRetition(IntVector *newRegexVector, int start, IntVector *content, int max, int min) {
+    if (max == 0) {
+    } else {
+        for (int i = 0; i < getIntVectorDataSize(content); i++) {
+            deleteIntVectorLastData(newRegexVector);
+        }
+        for (int r = 0; r < max; r++) {
+            for (int i = 0; i < getIntVectorDataSize(content); i++) {
+                appendIntVector(newRegexVector, getIntVectorData(content, i));
+            }
+        }
+        int left = getIntVectorData(content, 0);
+        if (left == ANONYMOUS_CAPTURE_LEFT || left == NAMED_CAPTURE_LEFT){
+            setIntVectorData(content, 0, -'(');
+            setIntVectorData(content, -1, -')');
+        }
+        appendIntVector(newRegexVector, -'|');
+        for (int t = max - 1; t > min;t--){
+            for (int r = 0; r < t; r++) {
+                for (int i = 0; i < getIntVectorDataSize(content); i++) {
+                    appendIntVector(newRegexVector, getIntVectorData(content, i));
+                }
+            }
+        }
+        /*min times*/
+        if(min == 0){
+        
+        }
+    }
+}
+
+int unfoldRepeat(IntVector *regexVector) {
+    int data;
+    IntVector *newRegexVector = initIntVector(getIntVectorDataSize(regexVector) * 2);
+    for (int i = 0; i < getIntVectorDataSize(regexVector); i++) {
+        data = getIntVectorData(regexVector, i);
+        if ('{' == -data) {
+            int min, max;
+            /*记得加上错误处理*/
+            getRepeatTimes(regexVector, i, &max, &min);
+            int scope = getRepeatScope(regexVector, i);
+            if (scope > 0) {
+                int start = i - scope;
+                IntVector *content = initIntVector(scope);
+                for (int t = start; t < i; t++) {
+                    appendIntVector(content, getIntVectorData(regexVector, t));
+                }
+
+                freeIntVector(content);
+            } else {
+                /*error*/
+            }
+        } else if ('(' == -data || ':' == -data || '=' == -data) {
+            i = addFunction(regexVector, newRegexVector, i);
+        } else {
+            appendIntVector(newRegexVector, data);
+        }
+    }
 }

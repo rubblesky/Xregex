@@ -1,4 +1,5 @@
 #include "xregex.h"
+#include <stdlib.h>
 IntVector *initIntVector(int size) {
     IntVector *iv = malloc(sizeof(IntVector));
     iv->allocSize = size;
@@ -41,6 +42,8 @@ int getIntVectorData(IntVector *iv, int position) {
 void setIntVectorData(IntVector *iv, int position, int data) {
     if (position > 0 && position < iv->dataSize) {
         iv->vector[position] = data;
+    } else if (position < 0 && position <= iv->dataSize) {
+        iv->vector[iv->dataSize + position] = data;
     } else {
         DEAL_ERRER(-2, "vector out of size\n");
     }
@@ -56,6 +59,10 @@ IntVector *copyIntVector(IntVector *iv) {
 /*只删除数据 不释放内存*/
 void deleteIntVectorData(IntVector *iv) {
     iv->dataSize = 0;
+}
+
+void deleteIntVecterLastData(IntVector *iv){
+    iv->dataSize--;
 }
 
 void freeIntVector(IntVector *iv) {

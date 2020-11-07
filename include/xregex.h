@@ -32,6 +32,7 @@ void setIntVectorData(IntVector *iv, int position, int data);
 IntVector *copyIntVector(IntVector *iv);
 /*只删除数据 不释放内存*/
 void deleteIntVectorData(IntVector *iv);
+void deleteIntVecterLastData(IntVector *iv);
 void freeIntVector(IntVector *iv);
 
 typedef struct RepeatOption {
@@ -72,4 +73,5 @@ int deleteXregexNode(XregexNode *xn, int mode);
 void freeXregexTree(XregexTree *xt);
 
 XregexTree *getXregextTree(char *regexExpress);
+
 #endif
