@@ -1,13 +1,15 @@
 #include <stdio.h>
 
 #include "CuTest.h"
-CuSuite *CuGetSuite();
+#include "allTest.h"
 
 void RunAllTests(void) {
     CuString *output = CuStringNew();
     CuSuite *suite = CuSuiteNew();
 
-    CuSuiteAddSuite(suite, CuGetSuite());
+    CuSuiteAddSuite(suite, CuGetUtfSuite());
+    CuSuiteAddSuite(suite, CuGetStackSuite());
+
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

@@ -4,8 +4,8 @@
 #include <string.h>
 
 #include "CuTest.h"
-#include "lexical.c"
-#include "stack.h"
+#include "allTest.h"
+#include "../src/lexical.c"
 #include "xregex.h"
 void testUtf8ToInt(CuTest *tc) {
     char *s;
@@ -105,125 +105,6 @@ void testDeleteXregexNode(CuTest *tc) {
     CuAssertIntEquals(tc, 0, result);
 }
 
-void assignInt(void *a, void *b) {
-    *(int *)a = *(int *)b;
-}
-void testInitStack(CuTest *tc) {
-    Stack *stack = NULL;
-    stack = INIT_STACK(int, 0, assignInt);
-    CuAssertPtrNotNull(tc, stack);
-    CuAssertIntEquals(tc, 0, stack->arrayUsedSize);
-    CuAssertIntEquals(tc, DEFAULT_STACK_SIZE, stack->arrayAllocSize);
-    CuAssertIntEquals(tc, sizeof(int), stack->valueTypeSize);
-    freeStack(stack);
-}
-void testPushStack(CuTest *tc) {
-    Stack *stack = NULL;
-    stack = initStack(sizeof(int), 3, assignInt);
-    int c = 5;
-    stackPush(stack, &c);
-    c = 6;
-    stackPush(stack, &c);
-    stackPush(stack, &c);
-    CuAssertIntEquals(tc, 3, stack->arrayAllocSize);
-    stackPush(stack, &c);
-    CuAssertIntEquals(tc, 6, stack->arrayAllocSize);
-    CuAssertIntEquals(tc, 4, stack->arrayUsedSize);
-    freeStack(stack);
-}
-void testPopStack(CuTest *tc) {
-    Stack *stack = NULL;
-    stack = initStack(sizeof(int), 3, assignInt);
-    int c = 5;
-    stackPush(stack, &c);
-    c = 6;
-    stackPush(stack, &c);
-    c = 7;
-    stackPush(stack, &c);
-    c = 8;
-    stackPush(stack, &c);
-
-    c = stackPop(stack);
-    CuAssertIntEquals(tc, 0, c);
-    c = stackPop(stack);
-    c = stackPop(stack);
-    c = stackPop(stack);
-    CuAssertIntEquals(tc, 0, c);
-    c = stackPop(stack);
-    CuAssertIntEquals(tc, -1, c);
-
-    freeStack(stack);
-}
-
-void testGetTopStack(CuTest *tc) {
-    Stack *stack = NULL;
-    stack = initStack(sizeof(int), 3, assignInt);
-    int c = 5;
-    stackPush(stack, &c);
-    c = 6;
-    stackPush(stack, &c);
-    c = 7;
-    stackPush(stack, &c);
-    c = 8;
-    stackPush(stack, &c);
-
-    int *p;
-    p = stackGetTop(stack);
-    CuAssertIntEquals(tc, *p, 8);
-    stackPop(stack);
-    p = stackGetTop(stack);
-    CuAssertIntEquals(tc, *p, 7);
-    stackPop(stack);
-    p = stackGetTop(stack);
-    CuAssertIntEquals(tc, *p, 6);
-    stackPop(stack);
-    p = stackGetTop(stack);
-    CuAssertIntEquals(tc, *p, 5);
-    stackPop(stack);
-
-    freeStack(stack);
-}
-
-void testInitIntVector(CuTest *tc){
-    IntVector *iv = NULL;
-    iv = initIntVector(5);
-    CuAssertIntEquals(tc, iv->allocSize, 5);
-    CuAssertPtrNotNull(tc, iv);
-    CuAssertIntEquals(tc, iv->dataSize, 0);
-    freeIntVector(iv);
-}
-void testAppendIntVector(CuTest *tc) {
-    IntVector* iv = initIntVector(2);
-    appendIntVector(iv, 1);
-    CuAssertIntEquals(tc, iv->vector[0], 1);
-    CuAssertIntEquals(tc, iv->dataSize, 1);
-    appendIntVector(iv, 2);
-    CuAssertIntEquals(tc, iv->vector[1], 2);
-    appendIntVector(iv, 3);
-    CuAssertIntEquals(tc, iv->vector[2], 3);
-    CuAssertIntEquals(tc, iv->allocSize, 4);
-    CuAssertIntEquals(tc, iv->dataSize, 3);
-    freeIntVector(iv);
-}
-void testDeleteIntVector(CuTest *tc) {
-    IntVector *iv = initIntVector(2);
-    appendIntVector(iv, 1);
-    appendIntVector(iv, 2);
-    CuAssertIntEquals(tc, iv->dataSize, 2);
-    deleteIntVectorData(iv);
-    CuAssertIntEquals(tc, iv->dataSize, 0);
-    freeIntVector(iv);
-}
-void testGetIntVectorData(CuTest *tc) {
-    IntVector *iv = initIntVector(2);
-    appendIntVector(iv, 1);
-    appendIntVector(iv, 2);
-    int i = getIntVectorData(iv, 0);
-    CuAssertIntEquals(tc, i, 1);
-    i = getIntVectorData(iv, 1);
-    CuAssertIntEquals(tc, i, 2);
-    freeIntVector(iv);
-}
 
 void testDealDefiniteRepeat(CuTest *tc) {
     char re[] = "{1,2}";
@@ -284,7 +165,7 @@ void testLexicalError(CuTest *tc){
 }
 
 CuSuite *
-CuGetSuite(void) {
+CuGetUtfSuite(void) {
     CuSuite *suite = CuSuiteNew();
 
     SUITE_ADD_TEST(suite, testUtf8ToInt);
@@ -294,15 +175,7 @@ CuGetSuite(void) {
     SUITE_ADD_TEST(suite, testAddChildXregexNode);
     SUITE_ADD_TEST(suite, testDeleteXregexNode);
 
-    SUITE_ADD_TEST(suite, testInitStack);
-    SUITE_ADD_TEST(suite, testPushStack);
-    SUITE_ADD_TEST(suite, testPopStack);
-    SUITE_ADD_TEST(suite, testGetTopStack);
 
-    SUITE_ADD_TEST(suite, testInitIntVector);
-    SUITE_ADD_TEST(suite, testAppendIntVector);
-    SUITE_ADD_TEST(suite, testDeleteIntVector);
-    SUITE_ADD_TEST(suite, testGetIntVectorData);
 
     SUITE_ADD_TEST(suite, testDealDefiniteRepeat);
 

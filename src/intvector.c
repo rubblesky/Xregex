@@ -1,5 +1,6 @@
 #include "xregex.h"
 #include <stdlib.h>
+#include <string.h>
 IntVector *initIntVector(int size) {
     IntVector *iv = malloc(sizeof(IntVector));
     iv->allocSize = size;
@@ -61,7 +62,7 @@ void deleteIntVectorData(IntVector *iv) {
     iv->dataSize = 0;
 }
 
-void deleteIntVecterLastData(IntVector *iv){
+void deleteIntVectorLastData(IntVector *iv){
     iv->dataSize--;
 }
 

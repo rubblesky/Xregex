@@ -213,7 +213,7 @@ IntVector *getRegexVector(char *regexExpress) {
     int i;
     while (0 != utf8ToInt(regexExpress++, &i) && i != 0) {
         if (i == '\\') {
-            if (0 == utf8ToInt(&i, regexExpress++) || 0 == i) {
+            if (0 == utf8ToInt(regexExpress++, &i ) || 0 == i) {
                 break;
             } else {
                 /*预处理器不负责纠错 由此出现奇怪的bug一律看作特性或UB*/
@@ -306,7 +306,7 @@ static int getRepeatTimes(IntVector *iv, int start, int *max, int *min) {
         DEAL_ERRER(-1, "unkown repeat start postion");
     } else {
         int times[2] = {0, 0};
-        int *tp = &times;
+        int *tp = times;
         int isCut = 0, isCount = 0;
         for (int i = start + 1; (data = getIntVectorData(iv, i)) != -'}'; i++) {
             if (data = ',') {
