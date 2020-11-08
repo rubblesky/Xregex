@@ -427,34 +427,57 @@ static int addFunction(IntVector *oldRegexVector, IntVector *newRegexVector, int
     return i;
 }
 
-static void addRetition(IntVector *newRegexVector, int start, IntVector *content, int max, int min) {
+static void repeat(IntVector *iv,IntVector *content,int times){
+    int data = getIntVectorData(content, 0);
+    if (data == ANONYMOUS_CAPTURE_LEFT || data == NAMED_CAPTURE_LEFT ){
+        appendIntVector(iv, -'(');
+        for (int r = 0; r < times; r++) {
+            for (int i = 1; i < getIntVectorDataSize(content) - 1; i++) {
+                appendIntVector(iv, getIntVectorData(content, i));
+            }
+        }
+        appendIntVector(iv, -')');
+    }else{
+        for (int r = 0; r < times; r++) {
+            for (int i = 0; i < getIntVectorDataSize(content); i++) {
+                appendIntVector(iv, getIntVectorData(content, i));
+            }
+        }
+    }
+}
+
+
+static void addRetition(IntVector *newRegexVector, IntVector *content, int max, int min) {
     if (max == 0) {
     } else {
         for (int i = 0; i < getIntVectorDataSize(content); i++) {
             deleteIntVectorLastData(newRegexVector);
         }
-        for (int r = 0; r < max; r++) {
+        appendIntVector(newRegexVector, -'(');
+
+        for (int t = max; t > min;t--){
             for (int i = 0; i < getIntVectorDataSize(content); i++) {
                 appendIntVector(newRegexVector, getIntVectorData(content, i));
             }
-        }
-        int left = getIntVectorData(content, 0);
-        if (left == ANONYMOUS_CAPTURE_LEFT || left == NAMED_CAPTURE_LEFT){
-            setIntVectorData(content, 0, -'(');
-            setIntVectorData(content, -1, -')');
-        }
-        appendIntVector(newRegexVector, -'|');
-        for (int t = max - 1; t > min;t--){
-            for (int r = 0; r < t; r++) {
-                for (int i = 0; i < getIntVectorDataSize(content); i++) {
-                    appendIntVector(newRegexVector, getIntVectorData(content, i));
-                }
-            }
+            repeat(newRegexVector, content, max - 1);
+            appendIntVector(newRegexVector, -'|');
         }
         /*min times*/
         if(min == 0){
-        
+            int data = getIntVectorData(content, 0);
+            if(data == ANONYMOUS_CAPTURE_LEFT){
+                appendIntVector(newRegexVector, ANONYMOUS_CAPTURE_LEFT);
+                appendIntVector(newRegexVector, EMPTY_STRING);
+                appendIntVector(newRegexVector, ANONYMOUS_CAPTURE_RIGHT);
+            }else if(data == NAMED_CAPTURE_LEFT){
+                appendIntVector(newRegexVector, NAMED_CAPTURE_LEFT);
+                appendIntVector(newRegexVector, EMPTY_STRING);
+                appendIntVector(newRegexVector, NAMED_CAPTURE_RIGHT);
+            }else{
+                appendIntVector(newRegexVector, EMPTY_STRING);
+            }
         }
+        appendIntVector(newRegexVector, -')');
     }
 }
 
@@ -474,7 +497,7 @@ int unfoldRepeat(IntVector *regexVector) {
                 for (int t = start; t < i; t++) {
                     appendIntVector(content, getIntVectorData(regexVector, t));
                 }
-
+                addRetition(newRegexVector, content, max, min);
                 freeIntVector(content);
             } else {
                 /*error*/
