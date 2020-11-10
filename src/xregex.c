@@ -10,6 +10,9 @@
 #define ANONYMOUS_CAPTURE_RIGHT -130 /*:)*/
 #define NAMED_CAPTURE_LEFT -131      /*(=*/
 #define NAMED_CAPTURE_RIGHT -132     /*=)*/
+#define CHARACTER_CLASS_LEFT -133   /*[:*/
+#define CHARACTER_CLASS_RIGHT -134  /*:]*/
+
 
 #define FIRST_BIT (0x80)       //1000 0000b
 #define FIRST_TWO_BITS (0xc0)  //1100 0000b
@@ -197,7 +200,7 @@ XregexTree *getXregextTree(char *regexExpress) {
 IntVector *preprocess(char *regexExpress);
 IntVector *getRegexVector(char *regexExpress);
 IntVector *dealMetacharacter(IntVector *regexVector);
-int unfoldRepeat(IntVector *regexVector);
+static IntVector *unfold(IntVector *regexVector);
 int analyzeRegexExpress(char *regexExpress, XregexNode *xn) {
     IntVector *regex = preprocess(regexExpress);
 }
@@ -205,7 +208,8 @@ int analyzeRegexExpress(char *regexExpress, XregexNode *xn) {
 IntVector *preprocess(char *regexExpress) {
     IntVector *rv = getRegexVector(regexExpress);
     rv = dealMetacharacter(rv);
-    unfoldRepeat(rv);
+    IntVector *nrv = unfold(rv);
+    freeIntVector(rv);
 }
 
 IntVector *getRegexVector(char *regexExpress) {
@@ -270,9 +274,9 @@ IntVector *dealMetacharacter(IntVector *regexVector) {
     int isInBracket = 0;
     for (int i = 0; data = getIntVectorData(regexVector, i); i++) {
         if (data = -'[') {
-            isInBracket = 1;
+            isInBracket++;
         } else if (data = -']') {
-            isInBracket = 0;
+            isInBracket--;
         } else {
             ;
         }
@@ -282,7 +286,6 @@ IntVector *dealMetacharacter(IntVector *regexVector) {
                 case -'(':
                 case -')':
                 case -'*':
-                case -':':
                 case -'=':
                     setPositive(regexVector, i);
             }
@@ -381,7 +384,8 @@ static int getRepeatScope(IntVector *iv, int end) {
 消除不与括号相连的 : 和 = 
 同时把与括号相连的按照语义添加到newregexVector中
 */
-static int addFunction(IntVector *oldRegexVector, IntVector *newRegexVector, int pos) {
+
+static int addCaptureFunction(IntVector *oldRegexVector, IntVector *newRegexVector, int pos) {
     int data = getIntVectorData(oldRegexVector, pos);
     int i = pos;
     if ('(' == -data) {
@@ -449,6 +453,10 @@ static void repeat(IntVector *iv,IntVector *content,int times){
 
 static void addRetition(IntVector *newRegexVector, IntVector *content, int max, int min) {
     if (max == 0) {
+        appendIntVector(newRegexVector, -'(');
+        repeat(newRegexVector, content, min+1);
+        appendIntVector(newRegexVector, -'*');
+        appendIntVector(newRegexVector, -')');
     } else {
         for (int i = 0; i < getIntVectorDataSize(content); i++) {
             deleteIntVectorLastData(newRegexVector);
@@ -480,8 +488,76 @@ static void addRetition(IntVector *newRegexVector, IntVector *content, int max, 
         appendIntVector(newRegexVector, -')');
     }
 }
+static int isEqual(char *s, IntVector *iv){
+    int i;
+    for (i = 0; s[i] != '\0' && s[i] == getIntVectorData(iv, i);i++)
+        ;
+    return s[i] == '\0';
+}
+static void replace(char * s,IntVector *newRegexVector){
+    for (int i = 0; s[i] != '\0'; i++) {
+        appendIntVector(newRegexVector, s[i]);
+    }
+}
+int dealCharacterClass(IntVector *iv,IntVector* newRegexVector){
+    if(isEqual("alnum",iv)){
+        replace("a-zA-Z0-9", newRegexVector);
+    } else if (isEqual("alpha", iv)) {
+        replace("a-zA-Z", newRegexVector);
+    } else if (isEqual("blank", iv)) {
+        replace("\t ", newRegexVector);
+    } else if (isEqual("cntrl", iv)) {
+        replace("\0-\37\177", newRegexVector);
+    } else if (isEqual("digit", iv)) {
+        replace("0-9", newRegexVector);
+    } /*else if (isEqual("graph", iv)) {
+        replace("a-zA-Z0-9", newRegexVector);
+    } */else if (isEqual("lower", iv)) {
+        replace("a-z", newRegexVector);
+    } /*else if (isEqual("print", iv)) {
+        replace("a-zA-Z0-9", newRegexVector);
+    } else if (isEqual("punct", iv)) {
+        replace("a-zA-Z0-9", newRegexVector);
+    } */else if (isEqual("space", iv)) {
+        replace("\f\n\r\t\v", newRegexVector);
+    } else if (isEqual("upper", iv)) {
+        replace("A-Z", newRegexVector);
+    } else if (isEqual("xdigit", iv)) {
+        replace("a-fA-F0-9", newRegexVector);
+    }else{
+        return -1;
+    }
+    return 0;
+}
 
-int unfoldRepeat(IntVector *regexVector) {
+int replaceCharacterClass(IntVector *oldRegexVector, IntVector *newRegexVector, int pos){
+    IntVector *iv = initIntVector(10);
+    int i,data;
+    int size = getIntVectorDataSize(oldRegexVector);
+    for (i = pos + 2; i < size && i < pos + 10 && (data = getIntVectorData(oldRegexVector, i)) != -':';i++){
+        appendIntVector(iv, data);
+    }
+    if(i == size || i == pos + 10){
+        appendIntVector(newRegexVector, -'[');
+        freeIntVector(iv);
+        return pos;
+    }else{
+        if(getIntVectorData(oldRegexVector,i+1) == -']'){
+            if(dealCharacterClass(iv, newRegexVector) == 0){
+                freeIntVector(iv);
+                return i;
+            }else{
+                /*error*/
+            }
+        }else{
+            appendIntVector(newRegexVector, -'[');
+            freeIntVector(iv);
+            return pos;
+        }
+    }
+}
+
+static IntVector *unfold(IntVector *regexVector) {
     int data;
     IntVector *newRegexVector = initIntVector(getIntVectorDataSize(regexVector) * 2);
     for (int i = 0; i < getIntVectorDataSize(regexVector); i++) {
@@ -503,8 +579,15 @@ int unfoldRepeat(IntVector *regexVector) {
                 /*error*/
             }
         } else if ('(' == -data || ':' == -data || '=' == -data) {
-            i = addFunction(regexVector, newRegexVector, i);
-        } else {
+            i = addCaptureFunction(regexVector, newRegexVector, i);
+        } else if('[' == -data){
+            if(getIntVectorData(regexVector,i+1) == -':'){
+                i = replaceCharacterClass(regexVector, newRegexVector, i);
+            }else{
+                appendIntVector(newRegexVector, data);
+            }
+        }
+         else {
             appendIntVector(newRegexVector, data);
         }
     }
