@@ -1,7 +1,7 @@
 add_executable(test)
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/test)
-set(TEST_LIST "AllTests.c" "CuTest.c" "utfTest.c")
+set(TEST_LIST "AllTests.c" "CuTest.c" "utfTest.c" "Xregex.c" "../src/lexical.c" "../src/intvector.c")
 
 enable_testing()
 add_test(cutest test)

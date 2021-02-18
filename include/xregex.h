@@ -37,6 +37,8 @@ void deleteIntVectorData(IntVector *iv);
 void deleteIntVectorLastData(IntVector *iv);
 void freeIntVector(IntVector *iv);
 
+IntVector * transExpress(char *express);
+IntVector * getEscapeCharacterExpress(IntVector *express);
 enum regexNodeAttr {
     SERIES,   /*串联*/
     PARALLEL, /*并联*/
@@ -60,7 +62,7 @@ typedef struct LexicalResult{
     enum LexicalResultType type;
 } LexicalResult;
 
-
+LexicalResult * lexicalAnalyse(IntVector * express);
 
 
 enum Symbol{
@@ -76,5 +78,5 @@ typedef struct RegexTreeNode{
     IntVector * string;
 
 } RegexTreeNode;
-
+RegexTreeNode *getRegexTree(LexicalResult *lr);
 #endif

@@ -5,6 +5,6 @@
 
 CuSuite* CuGetUtfSuite(void);
 
+CuSuite* CuGetRegexSuite(void);
 
-CuSuite* CuGetUtfSuite(void);
 #endif

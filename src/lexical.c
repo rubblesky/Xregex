@@ -10,7 +10,7 @@
 
 LexicalResult * lexicalAnalyse(IntVector * express){
     int dataLength = getIntVectorDataSize(express);
-    LexicalResult * lr = malloc(dataLength * sizeof(struct LexicalResult));
+    LexicalResult * lr = malloc((dataLength+1) * sizeof(struct LexicalResult));
     int isContinuous = 0;
     int k = -1;
     for(int i = 0;i < dataLength;i++){
@@ -54,4 +54,5 @@ LexicalResult * lexicalAnalyse(IntVector * express){
         }
     }
     lr[k+1].type = END;
+    return lr;
 }
