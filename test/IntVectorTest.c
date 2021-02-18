@@ -44,6 +44,10 @@ void testGetIntVectorData(CuTest *tc) {
     CuAssertIntEquals(tc, i, 1);
     i = getIntVectorData(iv, 1);
     CuAssertIntEquals(tc, i, 2);
+    i = getIntVectorData(iv,-1);
+    CuAssertIntEquals(tc,i,2);
+    i = getIntVectorData(iv,-2);
+    CuAssertIntEquals(tc,i,1);
     freeIntVector(iv);
 }
 

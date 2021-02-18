@@ -5,13 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define EMPTY_STRING -128
-#define ANONYMOUS_CAPTURE_LEFT -129  /*(:*/
-#define ANONYMOUS_CAPTURE_RIGHT -130 /*:)*/
-#define NAMED_CAPTURE_LEFT -131      /*(=*/
-#define NAMED_CAPTURE_RIGHT -132     /*=)*/
-#define CHARACTER_CLASS_LEFT -133   /*[:*/
-#define CHARACTER_CLASS_RIGHT -134  /*:]*/
+
 
 
 #define FIRST_BIT (0x80)       //1000 0000b
@@ -41,7 +35,7 @@ int utf8ToInt(unsigned char *s, int *result) {
             *result = *s;
             return 1;
         case 1:
-            return 0;
+            return -1;  //return  error
         case 2:
             *result += (int)(*s - 0xc0);
             break;
@@ -52,14 +46,14 @@ int utf8ToInt(unsigned char *s, int *result) {
             *result += (int)(*s - 0xf0);
             break;
         default:
-            return 0;
+            return -1; //return  error
     }
 
     for (int i = byte_num - 1; i > 0; i--) {
         s++;
         *result *= 0x40;
-        if (0xc0 != (*s) & FIRST_TWO_BITS) {
-            return 0;
+        if (0x80 != (*s) & FIRST_TWO_BITS) {
+            return -1;//return  error
         } else {
             *result += (*s - 0x80);
         }
@@ -69,14 +63,16 @@ int utf8ToInt(unsigned char *s, int *result) {
 
 int intToUtf8(int number, char *result) {
     if (number < 0) {
-        return 0;
+        return -1;  //return error
     } else if (number < 0x80) {
         *result = number;
+        *(result + 1) = 0;
         return 1;
     } else if (number < 0x800) {
         *result = 0xc0 + (number >> 6);
         result++;
         *result = FIRST_BIT + (number & LAST_SIX_BITS);
+        *(result + 1) = 0;
         return 2;
     } else if (number < 0x10000) {
         *result = 0xe0 + (number >> 12);
@@ -84,6 +80,7 @@ int intToUtf8(int number, char *result) {
         *result = FIRST_BIT + ((number >> 6) & LAST_SIX_BITS);
         result++;
         *result = FIRST_BIT + (number & LAST_SIX_BITS);
+        *(result + 1) = 0;
         return 3;
     } else if (number <= 0xf48fbfbf) {
         *result = 0xf0 + (number >> 18);
@@ -93,502 +90,160 @@ int intToUtf8(int number, char *result) {
         *result = FIRST_BIT + ((number >> 6) & LAST_SIX_BITS);
         result++;
         *result = FIRST_BIT + (number & LAST_SIX_BITS);
+        *(result + 1) = 0;
         return 4;
     } else {
-        return 0;
+        return -1;  //return error
     }
 }
 
-RepeatOption *initRepeatOption() {
-    RepeatOption *ro = malloc(sizeof(RepeatOption));
-    ro->isRepeative = 0;
-    ro->maxTimes = 0;
-    ro->munTimes = 0;
-    return ro;
-}
 
-void deleteXregexChildTree(XregexNode *xn);
-
-XregexTree *initXregexTree() {
-    XregexTree *xt = malloc(sizeof(XregexTree));
-    xt->root = newXregexNode();
-    return xt;
-}
-
-XregexNode *newXregexNode() {
-    XregexNode *xn = malloc(sizeof(XregexNode));
-    xn->child = NULL;
-    xn->childNum = 0;
-    xn->childSize = 0;
-    xn->content = NULL;
-    xn->attr = SERIES;
-    xn->repeat = initRepeatOption();
-    return xn;
-}
-
-void addChildXregexNode(XregexNode *parent, XregexNode *child) {
-    if (parent->childSize == 0) {
-        parent->child = malloc(FIRST_ALLOC_CHILD_SIZE * sizeof(XregexNode *));
-        parent->childSize = FIRST_ALLOC_CHILD_SIZE;
-    } else if (parent->childSize == parent->childNum) {
-        parent->childSize *= 2;
-        XregexNode **tmp = realloc(parent->child, parent->childSize * sizeof(XregexNode *) * 2);
-        if (tmp == NULL) {
-            perror(__FUNCTION__);
-        } else {
-            parent->child = tmp;
-        }
-    } else {
-        ;
-    }
-
-    parent->child[parent->childNum] = child;
-    parent->childNum++;
-}
-int deleteXregexNode(XregexNode *xn, int mode) {
-    assert(mode >= 1 && mode <= 3);
-    if (mode == FORCE) {
-        if (xn->childSize > 0) {
-            free(xn->child);
-        } else {
-            ;
-        }
-        free(xn->repeat);
-        free(xn);
-        return 0;
-    } else if (mode == RESTRICT) {
-        if (xn->childNum > 0) {
-            return -1;
-        } else if (xn->childSize > 0) {
-            free(xn->child);
-            ;
-        } else {
-            ;
-        }
-        free(xn->repeat);
-        free(xn);
-        return 0;
-    } else if (mode == RECURSIVE) {
-        deleteXregexChildTree(xn);
-
-        return 0;
-    } else {
-        return -2;
-    }
-}
-void freeXregexTree(XregexTree *xt) {
-    deleteXregexChildTree(xt->root);
-    free(xt);
-}
-
-void deleteXregexChildTree(XregexNode *xn) {
-    for (int i = 0; i < xn->childNum; i++) {
-        deleteXregexChildTree(xn->child[i]);
-    }
-    deleteXregexNode(xn, FORCE);
-}
-
-int analyzeRegexExpress(char *regexExpress, XregexNode *xn);
-
-XregexTree *getXregextTree(char *regexExpress) {
-    XregexTree *xt = initXregexTree();
-    XregexNode *xn = xt->root;
-    analyzeRegexExpress(regexExpress, xn);
-    return xt;
-}
-
-IntVector *preprocess(char *regexExpress);
-IntVector *getRegexVector(char *regexExpress);
-IntVector *dealMetacharacter(IntVector *regexVector);
-static IntVector *unfold(IntVector *regexVector);
-int analyzeRegexExpress(char *regexExpress, XregexNode *xn) {
-    IntVector *regex = preprocess(regexExpress);
-}
-
-IntVector *preprocess(char *regexExpress) {
-    IntVector *rv = getRegexVector(regexExpress);
-    rv = dealMetacharacter(rv);
-    IntVector *nrv = unfold(rv);
-    freeIntVector(rv);
-}
-
-IntVector *getRegexVector(char *regexExpress) {
-    IntVector *regexVector = initIntVector(strlen(regexExpress));
+/*convert express string into IntVector*/
+IntVector * transExpress(char *express){
+    IntVector *iv = initIntVector(strlen(express));
     int i;
-    while (0 != utf8ToInt(regexExpress++, &i) && i != 0) {
-        if (i == '\\') {
-            if (0 == utf8ToInt(regexExpress++, &i ) || 0 == i) {
-                break;
-            } else {
-                /*预处理器不负责纠错 由此出现奇怪的bug一律看作特性或UB*/
-                /* 
-                \n之类的转义字符不用考虑 
-                但是如果需要处理\b \w 这样原来 ASCII未定义的字符就要小心了 没准对C语言来说是UB
-                */
-                appendIntVector(regexVector, i);
-            }
-        } else {
-            switch (i) {
-                    /*先把它们设置为负值 处理元字符时还会调整*/
-                case '(':
-                case ')':
-                case '[':
-                case ']':
-                case '*':
-                case ':':
-                case '=':
-                case '^':
-                case '-':
-                    appendIntVector(regexVector, -i);
-                    break;
-                default:
-                    appendIntVector(regexVector, i);
-                    break;
-            }
-        }
+    while (utf8ToInt(express,&i) != -1 && i != 0){
+        appendIntVector(iv,i);
     }
-    return regexVector;
+    return iv;
 }
 
-void setNegative(IntVector *iv, int pos) {
-    /*这里其实应该加上错误处理的*/
-    int data = getIntVectorData(iv, pos);
-    if (data > 0) {
-        setIntVectorData(iv, pos, -data);
-    } else {
-        return;
+IntVector * getEscapeCharacterExpress(IntVector *express){
+    int dataLength = getIntVectorDataSize(express);
+    IntVector * iv = initIntVector(dataLength);
+    for(int i = 0;i < dataLength;i++){
+        if('\\' == getIntVectorData(express,i)){
+            appendIntVector(iv,-getIntVectorData(express,++i));
+        }
+        else{
+            appendIntVector(iv,getIntVectorData(express,i));
+        }
     }
+    return iv;
 }
 
-void setPositive(IntVector *iv, int pos) {
-    int data = getIntVectorData(iv, pos);
-    if (data < 0) {
-        setIntVectorData(iv, pos, -data);
-    } else {
-        return;
-    }
+RegexTreeNode *getRegexTree(LexicalResult *lr){
+    RegexTreeNode * root = malloc(sizeof (struct RegexTreeNode));
+    root->symbol = N_S;
+    root->parent = NULL;
+    root->firstChild = NULL;
+    root->nextSibling = NULL;
+
 }
 
-IntVector *dealMetacharacter(IntVector *regexVector) {
-    int data;
-    int isInBracket = 0;
-    for (int i = 0; data = getIntVectorData(regexVector, i); i++) {
-        if (data = -'[') {
-            isInBracket++;
-        } else if (data = -']') {
-            isInBracket--;
-        } else {
-            ;
-        }
+int F_S(RegexTreeNode *rt,LexicalResult *restInput);
+int F_A(RegexTreeNode *rt,LexicalResult *restInput);
+int F_B(RegexTreeNode *rt,LexicalResult *restInput);
+int F_C(RegexTreeNode *rt,LexicalResult *restInput);
+int F_D(RegexTreeNode *rt,LexicalResult *restInput);
+int F_E(RegexTreeNode *rt,LexicalResult *restInput);
 
-        if (isInBracket) {
-            switch (data) {
-                case -'(':
-                case -')':
-                case -'*':
-                case -'=':
-                    setPositive(regexVector, i);
-            }
-        } else {
-            switch (data) {
-                case -'-':
-                case -'^':
-                    setPositive(regexVector, i);
-                    break;
-                default:
-                    break;
-            }
+static RegexTreeNode *addNode(RegexTreeNode * parent,enum Symbol symbol){
+    RegexTreeNode *l = parent->firstChild;
+    RegexTreeNode *n = malloc(sizeof(struct RegexTreeNode));
+    n->firstChild = NULL;
+    n->nextSibling = NULL;
+    n->string = NULL;
+    if(l != NULL) {
+        parent->firstChild = n;
+        n->parent = parent;
+        n->symbol = symbol;
+    }else {
+        while (l != NULL) {
+            l = l->nextSibling;
         }
+        n->parent = parent;
+        l->nextSibling = n;
+        n->symbol = symbol;
     }
+    return n;
 }
 
-static int getRepeatTimes(IntVector *iv, int start, int *max, int *min) {
-    /*max = 0 代表正无穷*/
-    int data;
-    if ((data = getIntVectorData(iv, start)) != -'{') {
-        DEAL_ERRER(-1, "unkown repeat start postion");
-    } else {
-        int times[2] = {0, 0};
-        int *tp = times;
-        int isCut = 0, isCount = 0;
-        for (int i = start + 1; (data = getIntVectorData(iv, i)) != -'}'; i++) {
-            if (data = ',') {
-                if (tp == times) {
-                    tp++;
-                    isCount = 0;
-                    isCut = 0;
-                } else {
-                    /*error*/
-                }
-            } else if (data >= '0' && data <= '9' && !isCut) {
-                *tp *= 10;
-                *tp += data - '0';
-                isCount = 1;
-            } else if (isCount && (data == ' ' || data == '\t')) {
-                isCut = 1;
-            } else {
-                /*error*/
-            }
-        }
-        *min = times[0];
-        *max = times[1];
-        if (*max < *min && *max != 0) {
-            /*error*/
-        } else {
-            return 0;
-        }
+
+/* return -1 when error */
+int F_S(RegexTreeNode *rt,LexicalResult *restInput){
+    LexicalResult *initialRestInput = restInput;
+    if(restInput->type==LEFT_PARENTHESIS || restInput->type==CHARACTER_STRING){
+        restInput += F_A(addNode(rt,N_A),restInput);
+        restInput += F_S(addNode(rt,N_S),restInput);
     }
-}
-static int getMatch(IntVector *iv, int end, const int left, const int right) {
-    int data;
-    int isNotMatch = 0;
-    int i;
-    for (i = end - 1; i >= 0 && !isNotMatch && i != end - 1; i--) {
-        data = getIntVectorData(iv, i);
-        if (data == right) {
-            isNotMatch++;
-        } else if (data == left) {
-            isNotMatch--;
-        }
-    }
-    return end - i - 1;
-}
-static int getRepeatScope(IntVector *iv, int end) {
-    int i = end - 1;
-    if (i < 0) {
+    else if(restInput->type == END){
+        /*EMPTY STRING*/
+    } else{
+        errorString = "error occur when parsing non-terminal character S";
         return -1;
-        /*error*/
-    } else {
-        int data = getIntVectorData(iv, i);
-        switch (data) {
-            case -')':
-                return getMatch(iv, end, -'(', -')');
-            case -']':
-                return getMatch(iv, end, -'[', -']');
-            case ANONYMOUS_CAPTURE_RIGHT:
-                return getMatch(iv, end, ANONYMOUS_CAPTURE_LEFT, ANONYMOUS_CAPTURE_RIGHT);
-            case NAMED_CAPTURE_RIGHT:
-                return getMatch(iv, end, NAMED_CAPTURE_LEFT, NAMED_CAPTURE_RIGHT);
-            default:
-                if (data > 0) {
-                    return 1;
-                } else {
-                    /*error*/
-                    return -1;
-                }
-                break;
-        }
+        /*maybe the routine should stop here*/
     }
+    return restInput - initialRestInput;
 }
-/*
-消除不与括号相连的 : 和 = 
-同时把与括号相连的按照语义添加到newregexVector中
-*/
 
-static int addCaptureFunction(IntVector *oldRegexVector, IntVector *newRegexVector, int pos) {
-    int data = getIntVectorData(oldRegexVector, pos);
-    int i = pos;
-    if ('(' == -data) {
-        if (i + 1 < getIntVectorDataSize(oldRegexVector)) {
-            data = getIntVectorData(oldRegexVector, i + 1);
-            if (':' == -data) {
-                i++;
-                appendIntVector(newRegexVector, ANONYMOUS_CAPTURE_LEFT);
-            } else if ('=' == -data) {
-                i++;
-                appendIntVector(newRegexVector, NAMED_CAPTURE_LEFT);
-            } else {
-                appendIntVector(newRegexVector, -'(');
-            }
-        } else {
-            /*error*/
-        }
-    } else if (':' == -data) {
-        if (i + 1 < getIntVectorDataSize(oldRegexVector)) {
-            data = getIntVectorData(oldRegexVector, i - 1);
-            if (')' == -data) {
-                i++;
-                appendIntVector(newRegexVector, ANONYMOUS_CAPTURE_RIGHT);
-            } else {
-                /*添加正数*/
-                appendIntVector(newRegexVector, ':');
-            }
-        }
-    } else if ('=' == -data) {
-        if (i + 1 < getIntVectorDataSize(oldRegexVector)) {
-            data = getIntVectorData(oldRegexVector, i - 1);
-            if (')' == -data) {
-                i++;
-                appendIntVector(newRegexVector, NAMED_CAPTURE_RIGHT);
-            } else {
-                /*添加正数*/
-                appendIntVector(newRegexVector, '=');
-            }
-        }
-    } else {
+int F_A(RegexTreeNode *rt,LexicalResult *restInput){
+    LexicalResult *initialRestInput = restInput;
+    if(restInput->type==LEFT_PARENTHESIS || restInput->type==CHARACTER_STRING){
+        restInput += F_B(addNode(rt,N_B),restInput);
+        restInput += F_C(addNode(rt,N_C),restInput);
+        restInput += F_D(addNode(rt,N_D),restInput);
+    }else{
+        errorString = "error occur when parsing non-terminal character A";
         return -1;
+        /*maybe the routine should stop here*/
     }
-    return i;
+    return restInput - initialRestInput;
 }
 
-static void repeat(IntVector *iv,IntVector *content,int times){
-    int data = getIntVectorData(content, 0);
-    if (data == ANONYMOUS_CAPTURE_LEFT || data == NAMED_CAPTURE_LEFT ){
-        appendIntVector(iv, -'(');
-        for (int r = 0; r < times; r++) {
-            for (int i = 1; i < getIntVectorDataSize(content) - 1; i++) {
-                appendIntVector(iv, getIntVectorData(content, i));
-            }
-        }
-        appendIntVector(iv, -')');
+int F_B(RegexTreeNode *rt,LexicalResult *restInput){
+    LexicalResult *initialRestInput = restInput;
+    if(restInput->type==LEFT_PARENTHESIS){
+        restInput += F_E(addNode(rt,N_E),restInput);
+    }else if(restInput->type==CHARACTER_STRING){
+        addNode(rt,T)->string = restInput->string;
+        restInput += 1;
     }else{
-        for (int r = 0; r < times; r++) {
-            for (int i = 0; i < getIntVectorDataSize(content); i++) {
-                appendIntVector(iv, getIntVectorData(content, i));
-            }
-        }
-    }
-}
-
-
-static void addRetition(IntVector *newRegexVector, IntVector *content, int max, int min) {
-    if (max == 0) {
-        appendIntVector(newRegexVector, -'(');
-        repeat(newRegexVector, content, min+1);
-        appendIntVector(newRegexVector, -'*');
-        appendIntVector(newRegexVector, -')');
-    } else {
-        for (int i = 0; i < getIntVectorDataSize(content); i++) {
-            deleteIntVectorLastData(newRegexVector);
-        }
-        appendIntVector(newRegexVector, -'(');
-
-        for (int t = max; t > min;t--){
-            for (int i = 0; i < getIntVectorDataSize(content); i++) {
-                appendIntVector(newRegexVector, getIntVectorData(content, i));
-            }
-            repeat(newRegexVector, content, max - 1);
-            appendIntVector(newRegexVector, -'|');
-        }
-        /*min times*/
-        if(min == 0){
-            int data = getIntVectorData(content, 0);
-            if(data == ANONYMOUS_CAPTURE_LEFT){
-                appendIntVector(newRegexVector, ANONYMOUS_CAPTURE_LEFT);
-                appendIntVector(newRegexVector, EMPTY_STRING);
-                appendIntVector(newRegexVector, ANONYMOUS_CAPTURE_RIGHT);
-            }else if(data == NAMED_CAPTURE_LEFT){
-                appendIntVector(newRegexVector, NAMED_CAPTURE_LEFT);
-                appendIntVector(newRegexVector, EMPTY_STRING);
-                appendIntVector(newRegexVector, NAMED_CAPTURE_RIGHT);
-            }else{
-                appendIntVector(newRegexVector, EMPTY_STRING);
-            }
-        }
-        appendIntVector(newRegexVector, -')');
-    }
-}
-static int isEqual(char *s, IntVector *iv){
-    int i;
-    for (i = 0; s[i] != '\0' && s[i] == getIntVectorData(iv, i);i++)
-        ;
-    return s[i] == '\0';
-}
-static void replace(char * s,IntVector *newRegexVector){
-    for (int i = 0; s[i] != '\0'; i++) {
-        appendIntVector(newRegexVector, s[i]);
-    }
-}
-int dealCharacterClass(IntVector *iv,IntVector* newRegexVector){
-    if(isEqual("alnum",iv)){
-        replace("a-zA-Z0-9", newRegexVector);
-    } else if (isEqual("alpha", iv)) {
-        replace("a-zA-Z", newRegexVector);
-    } else if (isEqual("blank", iv)) {
-        replace("\t ", newRegexVector);
-    } else if (isEqual("cntrl", iv)) {
-        replace("\0-\37\177", newRegexVector);
-    } else if (isEqual("digit", iv)) {
-        replace("0-9", newRegexVector);
-    } /*else if (isEqual("graph", iv)) {
-        replace("a-zA-Z0-9", newRegexVector);
-    } */else if (isEqual("lower", iv)) {
-        replace("a-z", newRegexVector);
-    } /*else if (isEqual("print", iv)) {
-        replace("a-zA-Z0-9", newRegexVector);
-    } else if (isEqual("punct", iv)) {
-        replace("a-zA-Z0-9", newRegexVector);
-    } */else if (isEqual("space", iv)) {
-        replace("\f\n\r\t\v", newRegexVector);
-    } else if (isEqual("upper", iv)) {
-        replace("A-Z", newRegexVector);
-    } else if (isEqual("xdigit", iv)) {
-        replace("a-fA-F0-9", newRegexVector);
-    }else{
+        errorString = "error occur when parsing non-terminal character B";
         return -1;
+        /*maybe the routine should stop here*/
     }
-    return 0;
+    return restInput - initialRestInput;
 }
-
-int replaceCharacterClass(IntVector *oldRegexVector, IntVector *newRegexVector, int pos){
-    IntVector *iv = initIntVector(10);
-    int i,data;
-    int size = getIntVectorDataSize(oldRegexVector);
-    for (i = pos + 2; i < size && i < pos + 10 && (data = getIntVectorData(oldRegexVector, i)) != -':';i++){
-        appendIntVector(iv, data);
-    }
-    if(i == size || i == pos + 10){
-        appendIntVector(newRegexVector, -'[');
-        freeIntVector(iv);
-        return pos;
+int F_C(RegexTreeNode *rt,LexicalResult *restInput){
+    LexicalResult *initialRestInput = restInput;
+    if(restInput->type==ASTERISK){
+        addNode(rt,T);
+        restInput += 1;
+    }else if(restInput->type==VERTICAL_BAR || restInput->type==LEFT_PARENTHESIS||restInput==RIGHT_PARENTHESIS) {
+        /*EMPTY STRING*/
     }else{
-        if(getIntVectorData(oldRegexVector,i+1) == -']'){
-            if(dealCharacterClass(iv, newRegexVector) == 0){
-                freeIntVector(iv);
-                return i;
-            }else{
-                /*error*/
-            }
-        }else{
-            appendIntVector(newRegexVector, -'[');
-            freeIntVector(iv);
-            return pos;
-        }
+        errorString = "error occur when parsing non-terminal character C";
+        return -1;
+        /*maybe the routine should stop here*/
     }
+    return restInput - initialRestInput;
 }
 
-static IntVector *unfold(IntVector *regexVector) {
-    int data;
-    IntVector *newRegexVector = initIntVector(getIntVectorDataSize(regexVector) * 2);
-    for (int i = 0; i < getIntVectorDataSize(regexVector); i++) {
-        data = getIntVectorData(regexVector, i);
-        if ('{' == -data) {
-            int min, max;
-            /*记得加上错误处理*/
-            getRepeatTimes(regexVector, i, &max, &min);
-            int scope = getRepeatScope(regexVector, i);
-            if (scope > 0) {
-                int start = i - scope;
-                IntVector *content = initIntVector(scope);
-                for (int t = start; t < i; t++) {
-                    appendIntVector(content, getIntVectorData(regexVector, t));
-                }
-                addRetition(newRegexVector, content, max, min);
-                freeIntVector(content);
-            } else {
-                /*error*/
-            }
-        } else if ('(' == -data || ':' == -data || '=' == -data) {
-            i = addCaptureFunction(regexVector, newRegexVector, i);
-        } else if('[' == -data){
-            if(getIntVectorData(regexVector,i+1) == -':'){
-                i = replaceCharacterClass(regexVector, newRegexVector, i);
-            }else{
-                appendIntVector(newRegexVector, data);
-            }
-        }
-         else {
-            appendIntVector(newRegexVector, data);
-        }
+int F_D(RegexTreeNode *rt,LexicalResult *restInput){
+    LexicalResult *initialRestInput = restInput;
+    if(restInput->type==VERTICAL_BAR){
+        addNode(rt,T);
+        restInput += 1;
+    }else if(restInput->type==LEFT_PARENTHESIS||restInput==RIGHT_PARENTHESIS) {
+        /*EMPTY STRING*/
+    }else{
+        errorString = "error occur when parsing non-terminal character D";
+        return -1;
+        /*maybe the routine should stop here*/
     }
+    return restInput - initialRestInput;
+}
+int F_E(RegexTreeNode *rt,LexicalResult *restInput){
+    LexicalResult *initialRestInput = restInput;
+    if(restInput->type==LEFT_PARENTHESIS){
+        restInput += 1;
+        restInput += F_A(addNode(rt,N_A),restInput);
+        restInput += 1;
+    }else{
+        errorString = "error occur when parsing non-terminal character E";
+        return -1;
+        /*maybe the routine should stop here*/
+    }
+    return restInput - initialRestInput;
 }

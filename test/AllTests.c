@@ -8,7 +8,7 @@ void RunAllTests(void) {
     CuSuite *suite = CuSuiteNew();
 
     CuSuiteAddSuite(suite, CuGetUtfSuite());
-    CuSuiteAddSuite(suite, CuGetStackSuite());
+
 
 
     CuSuiteRun(suite);

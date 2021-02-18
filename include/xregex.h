@@ -4,12 +4,14 @@
 #define FORCE 1
 #define RESTRICT 2
 #define RECURSIVE 3
+
+char *errorString;
 typedef int LongChar;
 void dealError(int exitStauts,const char *errorPosition, char *msg);
 #define DEAL_ERRER(exitStauts, msg) dealError(exitStauts, __FUNCTION__, msg)
 /*
 返回utf-8码占据的字节数
-如果出错返回0
+如果出错返回-1
 */
 int utf8ToInt(unsigned char *s, int *result);
 /*
@@ -35,43 +37,44 @@ void deleteIntVectorData(IntVector *iv);
 void deleteIntVectorLastData(IntVector *iv);
 void freeIntVector(IntVector *iv);
 
-typedef struct RepeatOption {
-    int isRepeative;
-    int munTimes;
-    int maxTimes;
-} RepeatOption;
-
-RepeatOption *initRepeatOption();
-
 enum regexNodeAttr {
     SERIES,   /*串联*/
     PARALLEL, /*并联*/
     OPTIONAL, /*可选*/
 };
-typedef struct XregexNode {
-    struct XregexNode **child;
-    int childNum;
-    int childSize;
-    enum regexNodeAttr attr;
-    RepeatOption *repeat;
-    IntVector *content;
-} XregexNode;
 
-typedef struct XregexTree {
-    XregexNode *root;
+enum LexicalResultType {
+    CHARACTER_STRING,
+    LEFT_PARENTHESIS,   /* ( */
+    RIGHT_PARENTHESIS,  /* ) */
+    LEFT_BRACKET,       /* [ */
+    RIGHT_BRACKET,      /* ] */
+    ASTERISK,           /* * */
+    VERTICAL_BAR,       /* | */
+    EMPTY_STRING,
+    END
+};
 
-} XregexTree;
+typedef struct LexicalResult{
+    IntVector *string;
+    enum LexicalResultType type;
+} LexicalResult;
 
-XregexTree *initXregexTree();
-XregexNode *newXregexNode();
-void addChildXregexNode(XregexNode *parent, XregexNode *child);
-/*删除单个节点 
-mode = FORCE 不检查节点是否有子节点
-mode = RESTRICT 节点有子节点时不执行删除操作并返回 -1
- */
-int deleteXregexNode(XregexNode *xn, int mode);
-void freeXregexTree(XregexTree *xt);
 
-XregexTree *getXregextTree(char *regexExpress);
+
+
+enum Symbol{
+    N_S,N_A,N_B,N_C,N_D,N_E,
+    T
+};
+
+typedef struct RegexTreeNode{
+    struct RegexTreeNode* parent;
+    struct RegexTreeNode* firstChild;
+    struct RegexTreeNode* nextSibling;
+    enum Symbol symbol;
+    IntVector * string;
+
+} RegexTreeNode;
 
 #endif

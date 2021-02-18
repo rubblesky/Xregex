@@ -5,6 +5,6 @@
 
 CuSuite* CuGetUtfSuite(void);
 
-CuSuite* CuGetStackSuite(void);
+
 CuSuite* CuGetUtfSuite(void);
 #endif
