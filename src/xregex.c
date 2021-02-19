@@ -139,6 +139,7 @@ RegexTreeNode *getRegexTree(LexicalResult *lr){
     root->firstChild = NULL;
     root->nextSibling = NULL;
     F_S(root,lr);
+    return root;
 }
 
 static RegexTreeNode *addNode(RegexTreeNode * parent,enum Symbol symbol){
@@ -171,7 +172,7 @@ int F_S(RegexTreeNode *rt,LexicalResult *restInput){
         restInput += F_A(addNode(rt,N_A),restInput);
         restInput += F_S(addNode(rt,N_S),restInput);
     }
-    else if(restInput->type == END){
+    else if(restInput->type == END || restInput->type == RIGHT_PARENTHESIS){
         printf("S->empty\n");
         /*EMPTY STRING*/
     } else{
@@ -257,9 +258,9 @@ int F_D(RegexTreeNode *rt,LexicalResult *restInput){
 int F_E(RegexTreeNode *rt,LexicalResult *restInput){
     LexicalResult *initialRestInput = restInput;
     if(restInput->type==LEFT_PARENTHESIS){
-        printf("E->(A)\n");
+        printf("E->(S)\n");
         restInput += 1;
-        restInput += F_A(addNode(rt,N_A),restInput);
+        restInput += F_S(addNode(rt,N_S),restInput);
         restInput += 1;
     }else{
         errorString = "error occur when parsing non-terminal character E";
