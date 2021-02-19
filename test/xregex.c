@@ -19,6 +19,7 @@ void testRegex(CuTest *tc) {
     LexicalResult *lr = lexicalAnalyse(iv2);
     freeIntVector(iv2);
     RegexTreeNode * root = getRegexTree(lr);
+    root = eliminateS(root);
     showRegexTree(root);
 
 }

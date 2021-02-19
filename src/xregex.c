@@ -270,3 +270,44 @@ int F_E(RegexTreeNode *rt,LexicalResult *restInput){
     }
     return restInput - initialRestInput;
 }
+
+/* No S have nextSibling*/
+RegexTreeNode * eliminateS(RegexTreeNode *rtn){
+    RegexTreeNode *l = rtn->firstChild;
+    RegexTreeNode *r = rtn->nextSibling;
+    if(l != NULL){
+        if(l->symbol == N_S){
+            if(l->firstChild != NULL){      //S->AS
+                l->firstChild->parent = rtn;
+                rtn->firstChild = l->firstChild;
+                free(l);
+                eliminateS(rtn->firstChild);
+            }else{      //S->empty
+                rtn->firstChild = NULL;
+                free(l);
+            }
+        }else{
+            eliminateS(l);
+        }
+    }
+    if(r != NULL){
+        if(r->symbol == N_S){
+            if(r->firstChild != NULL){      //S->AS
+                r->firstChild->parent = rtn;
+                rtn->nextSibling = r->firstChild;
+                free(r);
+                eliminateS(rtn->nextSibling);
+            }else{      //S->empty
+                rtn->nextSibling = NULL;
+                free(r);
+            }
+        } else{
+            eliminateS(r);
+        }
+
+    }
+    return rtn;
+}
+RegexTreeNode * eliminateB(RegexTreeNode *rtn){
+
+}
