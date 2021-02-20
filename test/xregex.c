@@ -20,6 +20,9 @@ void testRegex(CuTest *tc) {
     freeIntVector(iv2);
     RegexTreeNode * root = getRegexTree(lr);
     root = eliminateS(root);
+    root = eliminateB(root);
+    moveD(root);
+    moveC(root);
     showRegexTree(root);
 
 }
