@@ -289,6 +289,7 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn) {
                 rtn->firstChild = l->firstChild;
                 free(l);
                 eliminateS(rtn->firstChild);
+
             } else {      //S->empty
                 rtn->firstChild = NULL;
                 free(l);
@@ -300,10 +301,19 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn) {
     if (r != NULL) {
         if (r->symbol == N_S) {
             if (r->firstChild != NULL) {      //S->AS
+                RegexTreeNode *s = r->firstChild;
+                for(;s != NULL;s = s->nextSibling){
+                    s->parent = rtn;
+                }
                 r->firstChild->parent = rtn;
-                rtn->nextSibling = r->firstChild;
+                RegexTreeNode *f =rtn->firstChild;
+                for(;f->nextSibling!=NULL;f=f->nextSibling){
+                    ;
+                }
+                f->nextSibling = r->firstChild;
                 free(r);
-                eliminateS(rtn->nextSibling);
+                rtn->nextSibling = NULL;
+                eliminateS(f->nextSibling);
             } else {      //S->empty
                 rtn->nextSibling = NULL;
                 free(r);

@@ -22,7 +22,7 @@ void testRegex(CuTest *tc) {
     root = eliminateS(root);
     root = eliminateB(root);
     moveD(root);
-    moveC(root);
+    //moveC(root);
     showRegexTree(root);
 
 }
