@@ -12,7 +12,7 @@
 void showRegexTree(RegexTreeNode *rtn);
 
 void testRegex(CuTest *tc) {
-    char *re = "a((bc)*|d*)e";
+    char *re = "a((b|c)*|d*)e";
     IntVector *iv = transExpress(re);
     IntVector *iv2 = getEscapeCharacterExpress(iv);
     freeIntVector(iv);
@@ -20,9 +20,16 @@ void testRegex(CuTest *tc) {
     freeIntVector(iv2);
     RegexTreeNode * root = getRegexTree(lr);
     root = eliminateS(root);
+    printf("\nS:\n");
+    showRegexTree(root);
     root = eliminateB(root);
+    printf("\nB:\n");
+    showRegexTree(root);
     moveD(root);
-    //moveC(root);
+    printf("\nD:\n");
+    showRegexTree(root);
+    moveC(root);
+    printf("\nC:\n");
     showRegexTree(root);
 
 }

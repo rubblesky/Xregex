@@ -285,11 +285,7 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn) {
     if (l != NULL) {
         if (l->symbol == N_S) {
             if (l->firstChild != NULL) {      //S->AS
-                l->firstChild->parent = rtn;
-                rtn->firstChild = l->firstChild;
-                free(l);
                 eliminateS(rtn->firstChild);
-
             } else {      //S->empty
                 rtn->firstChild = NULL;
                 free(l);
@@ -301,19 +297,7 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn) {
     if (r != NULL) {
         if (r->symbol == N_S) {
             if (r->firstChild != NULL) {      //S->AS
-                RegexTreeNode *s = r->firstChild;
-                for(;s != NULL;s = s->nextSibling){
-                    s->parent = rtn;
-                }
-                r->firstChild->parent = rtn;
-                RegexTreeNode *f =rtn->firstChild;
-                for(;f->nextSibling!=NULL;f=f->nextSibling){
-                    ;
-                }
-                f->nextSibling = r->firstChild;
-                free(r);
-                rtn->nextSibling = NULL;
-                eliminateS(f->nextSibling);
+                eliminateS(rtn->nextSibling);
             } else {      //S->empty
                 rtn->nextSibling = NULL;
                 free(r);
@@ -325,6 +309,7 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn) {
     }
     return rtn;
 }
+
 
 RegexTreeNode *eliminateB(RegexTreeNode *rtn) {
     if (rtn->symbol == N_B) {
@@ -362,19 +347,22 @@ RegexTreeNode *moveD(RegexTreeNode *rtn) {
             RegexTreeNode *p = rtn->parent;
             RegexTreeNode *l;
             for (l = p->firstChild; l->nextSibling != NULL && l->nextSibling->symbol != N_D; l = l->nextSibling) {
-                l->parent = rtn;
+                ;
             }
-            l->parent = rtn;
-            l->nextSibling = rtn->firstChild;
-            rtn->firstChild = p->firstChild;
-            p->firstChild = rtn;
-            //rtn = l->nextSibling;
-            if (l->nextSibling->firstChild != NULL) {
-                moveD(l->nextSibling->firstChild);
+            l->nextSibling = rtn->nextSibling;  //NULL
+            p->nextSibling = rtn->firstChild;
+            p->parent->firstChild = rtn;    //at the beginning , D's parent is A, and this A is always the first child of S
+            p->parent = rtn;
+            rtn->firstChild = p;
+            moveD(p->nextSibling);
+            /*
+            if (p->nextSibling->firstChild != NULL) {
+                moveD(p->nextSibling->firstChild);
             }
-            if (l->nextSibling->nextSibling != NULL) {
-                moveD(l->nextSibling->nextSibling);
+            if (p->nextSibling->nextSibling != NULL) {
+                moveD(p->nextSibling->nextSibling);
             }
+*/
         } else {
             /* D -> empty*/
             RegexTreeNode *p = rtn->parent;
