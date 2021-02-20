@@ -279,31 +279,31 @@ int F_E(RegexTreeNode *rt, LexicalResult *restInput) {
 }
 
 /* No S have nextSibling*/
-RegexTreeNode *eliminateS(RegexTreeNode *rtn) {
+RegexTreeNode *eliminateSEmptyString(RegexTreeNode *rtn) {
     RegexTreeNode *l = rtn->firstChild;
     RegexTreeNode *r = rtn->nextSibling;
     if (l != NULL) {
         if (l->symbol == N_S) {
             if (l->firstChild != NULL) {      //S->AS
-                eliminateS(rtn->firstChild);
+                eliminateSEmptyString(  rtn->firstChild);
             } else {      //S->empty
                 rtn->firstChild = NULL;
                 free(l);
             }
         } else {
-            eliminateS(l);
+            eliminateSEmptyString(l);
         }
     }
     if (r != NULL) {
         if (r->symbol == N_S) {
             if (r->firstChild != NULL) {      //S->AS
-                eliminateS(rtn->nextSibling);
+                eliminateSEmptyString(rtn->nextSibling);
             } else {      //S->empty
                 rtn->nextSibling = NULL;
                 free(r);
             }
         } else {
-            eliminateS(r);
+            eliminateSEmptyString(r);
         }
 
     }
@@ -346,8 +346,7 @@ RegexTreeNode *moveD(RegexTreeNode *rtn) {
             /* D-> |A*/
             RegexTreeNode *p = rtn->parent;
             RegexTreeNode *l;
-            for (l = p->firstChild; l->nextSibling != NULL && l->nextSibling->symbol != N_D; l = l->nextSibling) {
-                ;
+            for (l = p->firstChild; l->nextSibling != NULL && l->nextSibling->symbol != N_D; l = l->nextSibling) { ;
             }
             l->nextSibling = rtn->nextSibling;  //NULL
             p->nextSibling = rtn->firstChild;
@@ -355,14 +354,6 @@ RegexTreeNode *moveD(RegexTreeNode *rtn) {
             p->parent = rtn;
             rtn->firstChild = p;
             moveD(p->nextSibling);
-            /*
-            if (p->nextSibling->firstChild != NULL) {
-                moveD(p->nextSibling->firstChild);
-            }
-            if (p->nextSibling->nextSibling != NULL) {
-                moveD(p->nextSibling->nextSibling);
-            }
-*/
         } else {
             /* D -> empty*/
             RegexTreeNode *p = rtn->parent;
@@ -394,18 +385,18 @@ RegexTreeNode *moveC(RegexTreeNode *rtn) {
             free(rtn->firstChild);
             rtn->firstChild = l;
 
-            if(l->nextSibling!=NULL){
+            if (l->nextSibling != NULL) {
                 rtn = l->nextSibling;
-            }else{
+            } else {
                 return NULL;
             }
         } else {
             RegexTreeNode *l = rtn->parent->firstChild;
             l->nextSibling = rtn->nextSibling;
             free(rtn);
-            if(l->nextSibling!=NULL){
+            if (l->nextSibling != NULL) {
                 rtn = l->nextSibling;
-            }else{
+            } else {
                 return NULL;
             }
         }
@@ -414,8 +405,97 @@ RegexTreeNode *moveC(RegexTreeNode *rtn) {
     if (rtn->firstChild != NULL) {
         moveC(rtn->firstChild);
     }
-    if(rtn->nextSibling != NULL){
+    if (rtn->nextSibling != NULL) {
         moveC(rtn->nextSibling);
     }
     return rtn;
+}
+RegexTreeNode *eliminateA(RegexTreeNode *rtn);
+
+RegexTreeNode *eliminateS(RegexTreeNode *rtn);
+RegexTreeNode *eliminateRedundancy(RegexTreeNode *rtn) {
+    // A->C
+    // A->T
+    // A->E
+    eliminateA(rtn);
+    // S->D
+    // S->T
+    eliminateS(rtn);
+    return rtn;
+
+}
+
+RegexTreeNode *eliminateA(RegexTreeNode *rtn) {
+    RegexTreeNode *l = rtn->firstChild;
+    RegexTreeNode *r = rtn->nextSibling;
+    if (l != NULL) {
+        if(l->symbol==N_A){
+            if(l->firstChild->symbol==T || l->firstChild->symbol==N_C|| l->firstChild->symbol==N_E){
+                l->firstChild->parent = rtn;
+                l->firstChild->nextSibling = l->nextSibling;
+                rtn->firstChild = l->firstChild;
+                free(l);
+            }else{
+                ;
+            }
+        }else {
+            ;
+        }
+        eliminateA(rtn->firstChild);
+    }
+
+    if (r != NULL) {
+        if(r->symbol==N_A){
+            if(r->firstChild->symbol==T || r->firstChild->symbol==N_C|| r->firstChild->symbol==N_E){
+                r->firstChild->parent = rtn;
+                r->firstChild->nextSibling = r->nextSibling;
+                rtn->nextSibling = r->firstChild;
+                free(r);
+            }else{
+                ;
+            }
+        }else{
+            ;
+        }
+        eliminateA(rtn->nextSibling);
+    }
+    return rtn;
+}
+
+RegexTreeNode *eliminateS(RegexTreeNode *rtn){
+    RegexTreeNode *l = rtn->firstChild;
+    RegexTreeNode *r = rtn->nextSibling;
+    if (l != NULL) {
+        if(l->symbol==N_S){
+            if( (l->firstChild->symbol==T&&l->nextSibling==NULL) || l->firstChild->symbol==N_D){
+                l->firstChild->parent = rtn;
+                l->firstChild->nextSibling = l->nextSibling;
+                rtn->firstChild = l->firstChild;
+                free(l);
+            }else{
+                ;
+            }
+        }else {
+            ;
+        }
+        eliminateS(rtn->firstChild);
+    }
+
+    if (r != NULL) {
+        if(r->symbol==N_S){
+            if((r->firstChild->symbol==T&&r->nextSibling==NULL) || r->firstChild->symbol==N_D){
+                r->firstChild->parent = rtn;
+                r->firstChild->nextSibling = r->nextSibling;
+                rtn->nextSibling = r->firstChild;
+                free(r);
+            }else{
+                ;
+            }
+        }else{
+            ;
+        }
+        eliminateS(rtn->nextSibling);
+    }
+    return rtn;
+
 }

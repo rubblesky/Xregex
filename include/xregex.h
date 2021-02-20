@@ -79,8 +79,9 @@ typedef struct RegexTreeNode{
 
 } RegexTreeNode;
 RegexTreeNode *getRegexTree(LexicalResult *lr);
-RegexTreeNode * eliminateS(RegexTreeNode *rtn);
+RegexTreeNode *eliminateSEmptyString(RegexTreeNode *rtn);
 RegexTreeNode * eliminateB(RegexTreeNode *rtn);
 RegexTreeNode *moveD(RegexTreeNode * rtn);
 RegexTreeNode *moveC(RegexTreeNode *rtn);
+RegexTreeNode *eliminateRedundancy(RegexTreeNode *rtn);
 #endif

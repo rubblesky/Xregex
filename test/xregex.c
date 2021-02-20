@@ -12,14 +12,14 @@
 void showRegexTree(RegexTreeNode *rtn);
 
 void testRegex(CuTest *tc) {
-    char *re = "a((b|c)*|d*)e";
+    char *re = "a((b|c|2)*|d*)e";
     IntVector *iv = transExpress(re);
     IntVector *iv2 = getEscapeCharacterExpress(iv);
     freeIntVector(iv);
     LexicalResult *lr = lexicalAnalyse(iv2);
     freeIntVector(iv2);
     RegexTreeNode * root = getRegexTree(lr);
-    root = eliminateS(root);
+    root = eliminateSEmptyString(root);
     printf("\nS:\n");
     showRegexTree(root);
     root = eliminateB(root);
@@ -31,7 +31,9 @@ void testRegex(CuTest *tc) {
     moveC(root);
     printf("\nC:\n");
     showRegexTree(root);
-
+    eliminateRedundancy(root);
+    printf("\n\neliminate redundancy:\n");
+    showRegexTree(root);
 }
 
 CuSuite *
