@@ -246,9 +246,9 @@ int F_C(RegexTreeNode *rt, LexicalResult *restInput) {
 int F_D(RegexTreeNode *rt, LexicalResult *restInput) {
     LexicalResult *initialRestInput = restInput;
     if (restInput->type == VERTICAL_BAR) {
-        printf("D->|A \n");
+        printf("D->|S \n");
         restInput += 1;
-        restInput += F_A(addNode(rt, N_A), restInput);
+        restInput += F_S(addNode(rt, N_S), restInput);
     } else if (restInput->type == LEFT_PARENTHESIS || restInput->type == RIGHT_PARENTHESIS ||
                restInput->type == CHARACTER_STRING || restInput->type == END) {
         printf("D->empty\n");
@@ -343,7 +343,7 @@ RegexTreeNode *moveD(RegexTreeNode *rtn) {
     if (rtn->symbol == N_D) {
         RegexTreeNode *f = rtn->firstChild;
         if (f != NULL) {
-            /* D-> |A*/
+            /* D-> |S*/
             RegexTreeNode *p = rtn->parent;
             RegexTreeNode *l;
             for (l = p->firstChild; l->nextSibling != NULL && l->nextSibling->symbol != N_D; l = l->nextSibling) { ;
@@ -368,7 +368,8 @@ RegexTreeNode *moveD(RegexTreeNode *rtn) {
         if (rtn->firstChild != NULL) {
             moveD(rtn->firstChild);
         }
-        if (rtn->nextSibling != NULL) {
+        if (rtn->nextSibling != NULL && rtn->parent->symbol != N_D) {
+            /* do not let the adjust affect the recursion */
             moveD(rtn->nextSibling);
         }
     }
@@ -410,9 +411,9 @@ RegexTreeNode *moveC(RegexTreeNode *rtn) {
     }
     return rtn;
 }
-RegexTreeNode *eliminateA(RegexTreeNode *rtn);
+static RegexTreeNode *eliminateA(RegexTreeNode *rtn);
 
-RegexTreeNode *eliminateS(RegexTreeNode *rtn);
+static RegexTreeNode *eliminateS(RegexTreeNode *rtn);
 RegexTreeNode *eliminateRedundancy(RegexTreeNode *rtn) {
     // A->C
     // A->T
