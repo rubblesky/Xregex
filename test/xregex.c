@@ -10,9 +10,9 @@
 #include "xregex.h"
 
 void showRegexTree(RegexTreeNode *rtn);
-
+void showBinaryRegexTree(BinaryRegexTreeNode *brtn);
 void testRegex(CuTest *tc) {
-    char *re = "(a(a|b)*)*";
+    char *re = "a|b*d|c*d*d";
     IntVector *iv = transExpress(re);
     IntVector *iv2 = getEscapeCharacterExpress(iv);
     freeIntVector(iv);
@@ -34,6 +34,18 @@ void testRegex(CuTest *tc) {
     eliminateRedundancy(root);
     printf("\n\neliminate redundancy:\n");
     showRegexTree(root);
+    root = addStart(root);
+    printf("\n\nadd start:\n");
+    showRegexTree(root);
+
+    adjustPriority(root);
+    printf("\n\nadjust priority:\n");
+    showRegexTree(root);
+/*
+    BinaryRegexTreeNode * broot;
+    getBinaryRegexTree(root,broot);
+    showBinaryRegexTree(broot);
+*/
 }
 
 CuSuite *
@@ -46,8 +58,14 @@ CuGetRegexSuite(void) {
 }
 
 char* printSymbol(struct RegexTreeNode *rtn) {
+    if(rtn == NULL){
+        return NULL;
+    }
     char *s;
     switch (rtn->symbol) {
+        case START:
+            s = "start";
+            break;
         case N_S:
             s = "S";
             break;
@@ -85,10 +103,10 @@ void showRegexTree(RegexTreeNode *rtn) {
     for(;j<i;j++){
         RegexTreeNode *p = queue[j];
         if(j == end){
-            printf("\n%s  ",printSymbol(queue[j]));
+            printf("\n%s:%s\t\t  ",printSymbol(queue[j]),printSymbol(queue[j]->parent));
             end = i;
         }else{
-            printf("%s  ",printSymbol(queue[j]));
+            printf("%s:%s\t\t  ",printSymbol(queue[j]),printSymbol(queue[j]->parent));
         }
         if(queue[j]->firstChild != NULL){
             queue[i++] = queue[j]->firstChild;
@@ -100,5 +118,13 @@ void showRegexTree(RegexTreeNode *rtn) {
         }
 
     }
-
  }
+
+void showBinaryRegexTree(BinaryRegexTreeNode *brtn){
+    if(brtn == NULL){return;}
+    else {
+        printf("%d  ", brtn->symbol);
+        showBinaryRegexTree(brtn->left);
+        showBinaryRegexTree(brtn->right);
+    }
+}

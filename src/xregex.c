@@ -345,6 +345,7 @@ RegexTreeNode *moveD(RegexTreeNode *rtn) {
         if (f != NULL) {
             /* D-> |S*/
             RegexTreeNode *p = rtn->parent;
+            rtn->parent = p->parent;
             RegexTreeNode *l;
             for (l = p->firstChild; l->nextSibling != NULL && l->nextSibling->symbol != N_D; l = l->nextSibling) { ;
             }
@@ -432,7 +433,7 @@ RegexTreeNode *eliminateA(RegexTreeNode *rtn) {
     if (l != NULL) {
         if(l->symbol==N_A){
             if(l->firstChild->symbol==T || l->firstChild->symbol==N_C|| l->firstChild->symbol==N_E){
-                l->firstChild->parent = rtn;
+                l->firstChild->parent = l->parent;
                 l->firstChild->nextSibling = l->nextSibling;
                 rtn->firstChild = l->firstChild;
                 free(l);
@@ -448,7 +449,7 @@ RegexTreeNode *eliminateA(RegexTreeNode *rtn) {
     if (r != NULL) {
         if(r->symbol==N_A){
             if(r->firstChild->symbol==T || r->firstChild->symbol==N_C|| r->firstChild->symbol==N_E){
-                r->firstChild->parent = rtn;
+                r->firstChild->parent = r->parent;
                 r->firstChild->nextSibling = r->nextSibling;
                 rtn->nextSibling = r->firstChild;
                 free(r);
@@ -469,7 +470,7 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn){
     if (l != NULL) {
         if(l->symbol==N_S){
             if( (l->firstChild->symbol==T&&l->firstChild->nextSibling==NULL) || l->firstChild->symbol==N_D){
-                l->firstChild->parent = rtn;
+                l->firstChild->parent = l->parent;
                 l->firstChild->nextSibling = l->nextSibling;
                 rtn->firstChild = l->firstChild;
                 free(l);
@@ -485,7 +486,7 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn){
     if (r != NULL) {
         if(r->symbol==N_S){
             if((r->firstChild->symbol==T&&r->firstChild->nextSibling==NULL) || r->firstChild->symbol==N_D){
-                r->firstChild->parent = rtn;
+                r->firstChild->parent = r->parent;
                 r->firstChild->nextSibling = r->nextSibling;
                 rtn->nextSibling = r->firstChild;
                 free(r);
@@ -501,10 +502,64 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn){
 
 }
 
+BinaryRegexTreeNode * getBinaryRegexTree(RegexTreeNode * rnt,BinaryRegexTreeNode *brnt){
+    brnt = malloc(sizeof (BinaryRegexTreeNode));
+    brnt->parent = rnt->parent;
+    brnt->symbol = rnt->symbol;
+    brnt->string = rnt->string;
+    brnt->left = NULL;
+    brnt->right = NULL;
 
+    if(rnt->firstChild != NULL){
+        brnt->left = getBinaryRegexTree(rnt->firstChild,brnt->left);
+    }
+    if(rnt->nextSibling != NULL){
+        brnt->parent->right = getBinaryRegexTree(rnt->nextSibling,brnt->parent->right);
+    }
+    return brnt;
+}
+RegexTreeNode *addStart(RegexTreeNode *root){
+    if(root->symbol==N_S && root->firstChild->nextSibling==NULL){
+        root->symbol = START;
+        return root;
+    }else{
+        RegexTreeNode *newRoot = malloc(sizeof(RegexTreeNode));
+        newRoot->symbol = START;
+        newRoot->parent = NULL;
+        newRoot->firstChild = root;
+        root->parent = newRoot;
+        newRoot->string = NULL;
+        return newRoot;
+    }
+}
 
 RegexTreeNode *adjustPriority(RegexTreeNode *rtn){
-    if(rtn->symbol = N_D){
+    if(rtn == NULL){
+        return NULL;
+    }
+    else if(rtn->symbol == N_D){
+        RegexTreeNode *p = rtn->parent;
+        if(p->symbol == N_S){
+            rtn->parent = p->parent;
+            if(p->parent->firstChild == p){
+                p->parent->firstChild = rtn;
+            }else{
+                p->parent->firstChild->nextSibling = rtn;
+            }
+            p->parent = rtn;
+            p->firstChild->nextSibling = rtn->firstChild;
+            rtn->firstChild->parent = p;
 
+            p->nextSibling = rtn->firstChild->nextSibling;
+            rtn->firstChild->nextSibling = NULL;
+            rtn->firstChild = p;
+            adjustPriority(rtn);
+        }else{
+            adjustPriority(rtn->firstChild);
+            adjustPriority(rtn->nextSibling);
+        }
+    }else{
+        adjustPriority(rtn->firstChild);
+        adjustPriority(rtn->nextSibling);
     }
 }
