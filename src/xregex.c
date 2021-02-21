@@ -468,7 +468,7 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn){
     RegexTreeNode *r = rtn->nextSibling;
     if (l != NULL) {
         if(l->symbol==N_S){
-            if( (l->firstChild->symbol==T&&l->nextSibling==NULL) || l->firstChild->symbol==N_D){
+            if( (l->firstChild->symbol==T&&l->firstChild->nextSibling==NULL) || l->firstChild->symbol==N_D){
                 l->firstChild->parent = rtn;
                 l->firstChild->nextSibling = l->nextSibling;
                 rtn->firstChild = l->firstChild;
@@ -484,7 +484,7 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn){
 
     if (r != NULL) {
         if(r->symbol==N_S){
-            if((r->firstChild->symbol==T&&r->nextSibling==NULL) || r->firstChild->symbol==N_D){
+            if((r->firstChild->symbol==T&&r->firstChild->nextSibling==NULL) || r->firstChild->symbol==N_D){
                 r->firstChild->parent = rtn;
                 r->firstChild->nextSibling = r->nextSibling;
                 rtn->nextSibling = r->firstChild;
@@ -499,4 +499,12 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn){
     }
     return rtn;
 
+}
+
+
+
+RegexTreeNode *adjustPriority(RegexTreeNode *rtn){
+    if(rtn->symbol = N_D){
+
+    }
 }

@@ -12,7 +12,7 @@
 void showRegexTree(RegexTreeNode *rtn);
 
 void testRegex(CuTest *tc) {
-    char *re = "a|b*d|c";
+    char *re = "(a(a|b)*)*";
     IntVector *iv = transExpress(re);
     IntVector *iv2 = getEscapeCharacterExpress(iv);
     freeIntVector(iv);
