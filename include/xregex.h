@@ -79,4 +79,29 @@ typedef struct ASTNode{
 } ASTNode;
 ASTNode *parse(char express[]);
 
+#define UNKNOW_POINT -1
+typedef struct NFAEdge{
+    int point;
+    int character;
+    struct NFAEdge * next;
+}NFAEdge;
+
+typedef struct NFANode {
+    int isEnd;
+    NFAEdge *out;
+}NFANode;
+
+
+typedef struct NFA{
+    NFANode *nodes;
+    int start;
+    int allocSize;
+    int usedSize;
+}NFA;
+
+
+NFA * initNFA();
+int newNFANodeIndex(struct NFA *nfa);
+void initNFANode(NFANode *node);
+void addNFAEdge(NFANode*node,int point,int character);
 #endif

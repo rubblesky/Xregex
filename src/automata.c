@@ -2,29 +2,11 @@
 // Created by lenovo on 2021/2/26.
 //
 #include <stdlib.h>
+#include "xregex.h"
 #define CHARACTER_NUMBER 65535
 
 
-typedef struct NFAEdge{
-    int point;
-    int character;
-}NFAEdge;
-
-typedef struct NFANode {
-    int isEnd;
-    NFAEdge *out;
-}NFANode;
-
-
-typedef struct NFA{
-    NFANode *nodes;
-    int start;
-    int allocSize;
-    int usedSize;
-}NFA;
-
-
-NFA * initAutomata(){
+NFA * initNFA(){
     NFA *a = malloc(sizeof(struct NFA));
 #define FIRST_ALLOC_SIZE 100
     a->allocSize = FIRST_ALLOC_SIZE;
@@ -45,4 +27,17 @@ int newNFANodeIndex(struct NFA *nfa){
         ;
     }
     return ++nfa->usedSize;
+}
+
+void initNFANode(NFANode *node){
+    node->out = NULL;
+    node->isEnd = 0;
+}
+
+void addNFAEdge(NFANode*node,int point,int character){
+    NFAEdge *newEdge = malloc(sizeof(struct NFAEdge));
+    newEdge->next = node->out;
+    node->out = newEdge;
+    newEdge->character = character;
+    newEdge->point = point;
 }

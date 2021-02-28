@@ -618,3 +618,69 @@ ASTNode *parse(char express[]){
     free(lr);
     return ASTRoot;
 }
+
+NFA *getNFA(ASTNode * root){
+    int     nodeStack[10000];
+    NFAEdge *edgeStack[10000];
+    ASTNode *treeStack[10000];
+    int     *nsp = nodeStack;
+    NFAEdge **esp = edgeStack;
+    ASTNode **tsp = treeStack;
+
+    NFA * automata = initNFA();
+    int ni;
+    *tsp++ = root;
+    while (tsp != treeStack){
+        if( tsp[-1]->right != NULL ){
+            *tsp++ = tsp[-1]->right;
+        }else if( tsp[-1]->left != NULL){
+            *tsp++ = tsp[-1]->right;
+        }else{
+            switch (tsp[-1]->symbol) {
+                case N_S:
+
+                    break;
+                case N_C:
+                    break;
+                case N_D:
+                    break;
+                case N_E:
+                    break;
+                case N_F:
+                    break;
+                case T:
+                    ni = newNFANodeIndex(automata);
+                    initNFANode(automata->nodes+ni);
+                    *nsp++ = ni;
+                    IntVector *string = tsp[-1]->string;
+                    int size = getIntVectorDataSize(string);
+                    for(int i = 0;i < size-1 ;i--){
+                        ni = newNFANodeIndex(automata);
+                        initNFANode(automata->nodes+ni);
+                        addNFAEdge(automata->nodes + ni - 1,ni,getIntVectorData(string,i));
+                    }
+                    addNFAEdge(automata->nodes + ni,UNKNOW_POINT,getIntVectorData(string,size-1));
+                    *esp++ = automata->nodes[ni].out;
+                    break;
+                case START:
+                    break;
+                default:
+                    /*error*/
+                    break;
+            }
+
+            tsp -= 1;
+            if(tsp != treeStack){
+                if(tsp[-1]->left == tsp[0]){
+                    free(tsp[0]);
+                    tsp[-1]->left == NULL;
+                }else if(tsp[-1]->right == tsp[0]){
+                    free(tsp[0]);
+                    tsp[-1]->right == NULL;
+                }else{
+                    /*error */
+                }
+            }
+        }
+    }
+}
