@@ -13,6 +13,18 @@
 #define FIRST_ALLOC_CHILD_SIZE (10)
 #define FIRST_ALLOC_CONENT_SIZE (30)
 
+typedef struct RegexTreeNode{
+    struct RegexTreeNode* parent;
+    struct RegexTreeNode* firstChild;
+    struct RegexTreeNode* nextSibling;
+    enum Symbol symbol;
+    IntVector * string;
+
+} RegexTreeNode;
+
+
+
+
 void dealError(int exitStauts, const char *errorPosition, char *msg) {
     fprintf(stderr, "%s : %s", errorPosition, msg);
     exit(exitStauts);
@@ -137,6 +149,8 @@ int F_D(RegexTreeNode *rt, LexicalResult *restInput);
 
 int F_E(RegexTreeNode *rt, LexicalResult *restInput);
 
+int F_F(RegexTreeNode *rt, LexicalResult *restInput);
+
 RegexTreeNode *getRegexTree(LexicalResult *lr) {
     RegexTreeNode *root = malloc(sizeof(struct RegexTreeNode));
     root->symbol = N_S;
@@ -172,7 +186,7 @@ static RegexTreeNode *addNode(RegexTreeNode *parent, enum Symbol symbol) {
 /* return -1 when error */
 int F_S(RegexTreeNode *rt, LexicalResult *restInput) {
     LexicalResult *initialRestInput = restInput;
-    if (restInput->type == LEFT_PARENTHESIS || restInput->type == CHARACTER_STRING) {
+    if (restInput->type == LEFT_PARENTHESIS || restInput->type == CHARACTER_STRING || restInput->type == LEFT_BRACKET) {
         printf("S->AS\n");
         restInput += F_A(addNode(rt, N_A), restInput);
         restInput += F_S(addNode(rt, N_S), restInput);
@@ -190,7 +204,7 @@ int F_S(RegexTreeNode *rt, LexicalResult *restInput) {
 
 int F_A(RegexTreeNode *rt, LexicalResult *restInput) {
     LexicalResult *initialRestInput = restInput;
-    if (restInput->type == LEFT_PARENTHESIS || restInput->type == CHARACTER_STRING) {
+    if (restInput->type == LEFT_PARENTHESIS || restInput->type == CHARACTER_STRING || restInput->type == LEFT_BRACKET) {
         printf("A->BCD\n");
         restInput += F_B(addNode(rt, N_B), restInput);
         restInput += F_C(addNode(rt, N_C), restInput);
@@ -213,6 +227,9 @@ int F_B(RegexTreeNode *rt, LexicalResult *restInput) {
         printf("B->T\n");
         addNode(rt, T)->string = restInput->string;
         restInput += 1;
+    } else if (restInput->type == LEFT_BRACKET) {
+        printf("B->F\n");
+        restInput += F_F(addNode(rt, N_F), restInput);
     } else {
         errorString = "error occur when parsing non-terminal character B";
         DEAL_ERRER(-1, errorString);
@@ -231,7 +248,7 @@ int F_C(RegexTreeNode *rt, LexicalResult *restInput) {
         restInput += 1;
     } else if (restInput->type == VERTICAL_BAR || restInput->type == LEFT_PARENTHESIS ||
                restInput->type == RIGHT_PARENTHESIS ||
-               restInput->type == CHARACTER_STRING || restInput->type == END) {
+               restInput->type == CHARACTER_STRING || restInput->type == LEFT_BRACKET || restInput->type == END) {
         printf("C->empty\n");
         /*EMPTY STRING*/
     } else {
@@ -250,7 +267,7 @@ int F_D(RegexTreeNode *rt, LexicalResult *restInput) {
         restInput += 1;
         restInput += F_S(addNode(rt, N_S), restInput);
     } else if (restInput->type == LEFT_PARENTHESIS || restInput->type == RIGHT_PARENTHESIS ||
-               restInput->type == CHARACTER_STRING || restInput->type == END) {
+               restInput->type == CHARACTER_STRING || restInput->type == LEFT_BRACKET || restInput->type == END) {
         printf("D->empty\n");
         /*EMPTY STRING*/
     } else {
@@ -278,6 +295,19 @@ int F_E(RegexTreeNode *rt, LexicalResult *restInput) {
     return restInput - initialRestInput;
 }
 
+int F_F(RegexTreeNode *rt, LexicalResult *restInput) {
+    if (restInput->type == LEFT_BRACKET) {
+        printf("F -> [T]\n");
+        addNode(rt, T);
+        return 3;
+    } else {
+        errorString = "error occur when parsing non-terminal character F";
+        DEAL_ERRER(-1, errorString);
+        return -1;
+    }
+}
+
+
 /* No S have nextSibling*/
 RegexTreeNode *eliminateSEmptyString(RegexTreeNode *rtn) {
     RegexTreeNode *l = rtn->firstChild;
@@ -285,7 +315,7 @@ RegexTreeNode *eliminateSEmptyString(RegexTreeNode *rtn) {
     if (l != NULL) {
         if (l->symbol == N_S) {
             if (l->firstChild != NULL) {      //S->AS
-                eliminateSEmptyString(  rtn->firstChild);
+                eliminateSEmptyString(rtn->firstChild);
             } else {      //S->empty
                 rtn->firstChild = NULL;
                 free(l);
@@ -412,9 +442,11 @@ RegexTreeNode *moveC(RegexTreeNode *rtn) {
     }
     return rtn;
 }
+
 static RegexTreeNode *eliminateA(RegexTreeNode *rtn);
 
 static RegexTreeNode *eliminateS(RegexTreeNode *rtn);
+
 RegexTreeNode *eliminateRedundancy(RegexTreeNode *rtn) {
     // A->C
     // A->T
@@ -431,70 +463,62 @@ RegexTreeNode *eliminateA(RegexTreeNode *rtn) {
     RegexTreeNode *l = rtn->firstChild;
     RegexTreeNode *r = rtn->nextSibling;
     if (l != NULL) {
-        if(l->symbol==N_A){
-            if(l->firstChild->symbol==T || l->firstChild->symbol==N_C|| l->firstChild->symbol==N_E){
+        if (l->symbol == N_A) {
+            if (l->firstChild->symbol == T || l->firstChild->symbol == N_C || l->firstChild->symbol == N_E) {
                 l->firstChild->parent = l->parent;
                 l->firstChild->nextSibling = l->nextSibling;
                 rtn->firstChild = l->firstChild;
                 free(l);
-            }else{
-                ;
+            } else { ;
             }
-        }else {
-            ;
+        } else { ;
         }
         eliminateA(rtn->firstChild);
     }
 
     if (r != NULL) {
-        if(r->symbol==N_A){
-            if(r->firstChild->symbol==T || r->firstChild->symbol==N_C|| r->firstChild->symbol==N_E){
+        if (r->symbol == N_A) {
+            if (r->firstChild->symbol == T || r->firstChild->symbol == N_C || r->firstChild->symbol == N_E) {
                 r->firstChild->parent = r->parent;
                 r->firstChild->nextSibling = r->nextSibling;
                 rtn->nextSibling = r->firstChild;
                 free(r);
-            }else{
-                ;
+            } else { ;
             }
-        }else{
-            ;
+        } else { ;
         }
         eliminateA(rtn->nextSibling);
     }
     return rtn;
 }
 
-RegexTreeNode *eliminateS(RegexTreeNode *rtn){
+RegexTreeNode *eliminateS(RegexTreeNode *rtn) {
     RegexTreeNode *l = rtn->firstChild;
     RegexTreeNode *r = rtn->nextSibling;
     if (l != NULL) {
-        if(l->symbol==N_S){
-            if( (l->firstChild->symbol==T&&l->firstChild->nextSibling==NULL) || l->firstChild->symbol==N_D){
+        if (l->symbol == N_S) {
+            if ((l->firstChild->symbol == T && l->firstChild->nextSibling == NULL) || l->firstChild->symbol == N_D) {
                 l->firstChild->parent = l->parent;
                 l->firstChild->nextSibling = l->nextSibling;
                 rtn->firstChild = l->firstChild;
                 free(l);
-            }else{
-                ;
+            } else { ;
             }
-        }else {
-            ;
+        } else { ;
         }
         eliminateS(rtn->firstChild);
     }
 
     if (r != NULL) {
-        if(r->symbol==N_S){
-            if((r->firstChild->symbol==T&&r->firstChild->nextSibling==NULL) || r->firstChild->symbol==N_D){
+        if (r->symbol == N_S) {
+            if ((r->firstChild->symbol == T && r->firstChild->nextSibling == NULL) || r->firstChild->symbol == N_D) {
                 r->firstChild->parent = r->parent;
                 r->firstChild->nextSibling = r->nextSibling;
                 rtn->nextSibling = r->firstChild;
                 free(r);
-            }else{
-                ;
+            } else { ;
             }
-        }else{
-            ;
+        } else { ;
         }
         eliminateS(rtn->nextSibling);
     }
@@ -502,27 +526,12 @@ RegexTreeNode *eliminateS(RegexTreeNode *rtn){
 
 }
 
-BinaryRegexTreeNode * getBinaryRegexTree(RegexTreeNode * rnt,BinaryRegexTreeNode *brnt){
-    brnt = malloc(sizeof (BinaryRegexTreeNode));
-    brnt->parent = rnt->parent;
-    brnt->symbol = rnt->symbol;
-    brnt->string = rnt->string;
-    brnt->left = NULL;
-    brnt->right = NULL;
 
-    if(rnt->firstChild != NULL){
-        brnt->left = getBinaryRegexTree(rnt->firstChild,brnt->left);
-    }
-    if(rnt->nextSibling != NULL){
-        brnt->parent->right = getBinaryRegexTree(rnt->nextSibling,brnt->parent->right);
-    }
-    return brnt;
-}
-RegexTreeNode *addStart(RegexTreeNode *root){
-    if(root->symbol==N_S && root->firstChild->nextSibling==NULL){
+RegexTreeNode *addStart(RegexTreeNode *root) {
+    if (root->symbol == N_S && root->firstChild->nextSibling == NULL) {
         root->symbol = START;
         return root;
-    }else{
+    } else {
         RegexTreeNode *newRoot = malloc(sizeof(RegexTreeNode));
         newRoot->symbol = START;
         newRoot->parent = NULL;
@@ -533,17 +542,16 @@ RegexTreeNode *addStart(RegexTreeNode *root){
     }
 }
 
-RegexTreeNode *adjustPriority(RegexTreeNode *rtn){
-    if(rtn == NULL){
+RegexTreeNode *adjustPriority(RegexTreeNode *rtn) {
+    if (rtn == NULL) {
         return NULL;
-    }
-    else if(rtn->symbol == N_D){
+    } else if (rtn->symbol == N_D) {
         RegexTreeNode *p = rtn->parent;
-        if(p->symbol == N_S){
+        if (p->symbol == N_S) {
             rtn->parent = p->parent;
-            if(p->parent->firstChild == p){
+            if (p->parent->firstChild == p) {
                 p->parent->firstChild = rtn;
-            }else{
+            } else {
                 p->parent->firstChild->nextSibling = rtn;
             }
             p->parent = rtn;
@@ -554,12 +562,59 @@ RegexTreeNode *adjustPriority(RegexTreeNode *rtn){
             rtn->firstChild->nextSibling = NULL;
             rtn->firstChild = p;
             adjustPriority(rtn);
-        }else{
+        } else {
             adjustPriority(rtn->firstChild);
             adjustPriority(rtn->nextSibling);
         }
-    }else{
+    } else {
         adjustPriority(rtn->firstChild);
         adjustPriority(rtn->nextSibling);
     }
+    return rtn;
+}
+
+
+RegexTreeNode *dealRegexTree(RegexTreeNode *root) {
+    root = eliminateSEmptyString(root);
+    root = eliminateB(root);
+    root = moveD(root);
+    root = moveC(root);
+    root = eliminateRedundancy(root);
+    root = addStart(root);
+    root = adjustPriority(root);
+    return root;
+}
+
+
+ASTNode *getBinaryTree(RegexTreeNode *rnt, ASTNode *brnt) {
+    if (rnt == NULL) {
+        return NULL;
+    } else {
+        brnt = malloc(sizeof(struct ASTNode));
+        brnt->symbol = rnt->symbol;
+        brnt->string = rnt->string;
+        brnt->left = getBinaryTree(rnt->firstChild, brnt->left);
+        brnt->right = (rnt->firstChild != NULL) ? getBinaryTree(rnt->firstChild->nextSibling, brnt->right):NULL;
+
+        return brnt;
+    }
+}
+
+ASTNode *getAST(LexicalResult *lr) {
+    RegexTreeNode *root = getRegexTree(lr);
+    root = dealRegexTree(root);
+    ASTNode * ASTRoot;
+    ASTRoot = getBinaryTree(root,ASTRoot);
+    return ASTRoot;
+}
+
+ASTNode *parse(char express[]){
+    IntVector *iv = transExpress(express);
+    IntVector *iv2 = getEscapeCharacterExpress(iv);
+    freeIntVector(iv);
+    LexicalResult *lr = lexicalAnalyse(iv2);
+    freeIntVector(iv2);
+    struct ASTNode* ASTRoot = getAST(lr);
+    free(lr);
+    return ASTRoot;
 }

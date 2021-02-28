@@ -66,34 +66,17 @@ LexicalResult * lexicalAnalyse(IntVector * express);
 
 
 enum Symbol{
-    N_S,N_A,N_B,N_C,N_D,N_E,
+    N_S,N_A,N_B,N_C,N_D,N_E,N_F,
     T,START
 };
 
-typedef struct RegexTreeNode{
-    struct RegexTreeNode* parent;
-    struct RegexTreeNode* firstChild;
-    struct RegexTreeNode* nextSibling;
+
+typedef struct ASTNode{
+    struct ASTNode *left;
+    struct ASTNode*right;
     enum Symbol symbol;
     IntVector * string;
-
-} RegexTreeNode;
-RegexTreeNode *getRegexTree(LexicalResult *lr);
-RegexTreeNode *eliminateSEmptyString(RegexTreeNode *rtn);
-RegexTreeNode * eliminateB(RegexTreeNode *rtn);
-RegexTreeNode *moveD(RegexTreeNode * rtn);
-RegexTreeNode *moveC(RegexTreeNode *rtn);
-RegexTreeNode *eliminateRedundancy(RegexTreeNode *rtn);
-RegexTreeNode *addStart(RegexTreeNode *root);
-RegexTreeNode *adjustPriority(RegexTreeNode *rtn);
-
-typedef struct BinaryRegexTreeNode{
-    struct BinaryRegexTreeNode *left;
-    struct BinaryRegexTreeNode*right;
-    struct BinaryRegexTreeNode*parent;
-    enum Symbol symbol;
-    IntVector * string;
-} BinaryRegexTreeNode;
-BinaryRegexTreeNode * getBinaryRegexTree(RegexTreeNode * rnt,BinaryRegexTreeNode *brnt);
+} ASTNode;
+ASTNode *parse(char express[]);
 
 #endif

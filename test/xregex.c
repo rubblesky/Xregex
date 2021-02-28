@@ -8,44 +8,13 @@
 #include "allTest.h"
 
 #include "xregex.h"
+void showAST(ASTNode *node);
 
-void showRegexTree(RegexTreeNode *rtn);
-void showBinaryRegexTree(BinaryRegexTreeNode *brtn);
 void testRegex(CuTest *tc) {
-    char *re = "a|b*d|c*d*d";
-    IntVector *iv = transExpress(re);
-    IntVector *iv2 = getEscapeCharacterExpress(iv);
-    freeIntVector(iv);
-    LexicalResult *lr = lexicalAnalyse(iv2);
-    freeIntVector(iv2);
-    RegexTreeNode * root = getRegexTree(lr);
-    root = eliminateSEmptyString(root);
-    printf("\nS:\n");
-    showRegexTree(root);
-    root = eliminateB(root);
-    printf("\nB:\n");
-    showRegexTree(root);
-    moveD(root);
-    printf("\nD:\n");
-    showRegexTree(root);
-    moveC(root);
-    printf("\nC:\n");
-    showRegexTree(root);
-    eliminateRedundancy(root);
-    printf("\n\neliminate redundancy:\n");
-    showRegexTree(root);
-    root = addStart(root);
-    printf("\n\nadd start:\n");
-    showRegexTree(root);
+    char *re = "ab|(cd)*e";
+    struct ASTNode* ASTRoot = parse(re);
+    showAST(ASTRoot);
 
-    adjustPriority(root);
-    printf("\n\nadjust priority:\n");
-    showRegexTree(root);
-/*
-    BinaryRegexTreeNode * broot;
-    getBinaryRegexTree(root,broot);
-    showBinaryRegexTree(broot);
-*/
 }
 
 CuSuite *
@@ -57,6 +26,16 @@ CuGetRegexSuite(void) {
     return suite;
 }
 
+
+void showAST(ASTNode *node){
+    if(node == NULL){return;}
+    else {
+        showAST(node->left);
+        showAST(node->right);
+        printf("%d  ", node->symbol);
+    }
+}
+/*
 char* printSymbol(struct RegexTreeNode *rtn) {
     if(rtn == NULL){
         return NULL;
@@ -84,12 +63,13 @@ char* printSymbol(struct RegexTreeNode *rtn) {
         case N_E:
             s = "E";
             break;
+        case N_F:
+            s = "F";
+            break;
         case T:
             s = "T";
             break;
-        case END:
-            s = "#";
-            break;
+
     }
     return s;
 }
@@ -119,12 +99,4 @@ void showRegexTree(RegexTreeNode *rtn) {
 
     }
  }
-
-void showBinaryRegexTree(BinaryRegexTreeNode *brtn){
-    if(brtn == NULL){return;}
-    else {
-        printf("%d  ", brtn->symbol);
-        showBinaryRegexTree(brtn->left);
-        showBinaryRegexTree(brtn->right);
-    }
-}
+*/
