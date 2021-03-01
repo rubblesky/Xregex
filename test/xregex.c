@@ -11,7 +11,7 @@
 void showAST(ASTNode *node);
 void  showNFA(NFA * automata);
 void testRegex(CuTest *tc) {
-    char *re = "a|b";
+    char *re = "ab|(cd)*e";
     struct ASTNode* ASTRoot = parse(re);
     showAST(ASTRoot);
     NFA * NFA1 = getNFA(ASTRoot);

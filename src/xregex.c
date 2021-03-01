@@ -633,19 +633,23 @@ static void dealT(NFA *automata, int **nsp, NFAEdge ***esp, IntVector *string) {
     freeIntVector(string);
 }
 
-static void dealC(NFA *automata, int start, NFAEdge *end) {
+static void dealC(NFA *automata,int **nsp, NFAEdge ***esp) {
+    int start = (*nsp)[-1];
+    NFAEdge *end = (*esp)[-1];
     int ni = newNFANodeIndex(automata);
     initNFANode(automata->nodes + ni);
     end->point = ni;
-    addNFAEdge(automata->nodes + ni, UNKNOW_POINT, NFA_EMPTY_STRING);
+    /* the order cannot be exchanged */
     addNFAEdge(automata->nodes + ni, start, NFA_EMPTY_STRING);
+    addNFAEdge(automata->nodes + ni, UNKNOW_POINT, NFA_EMPTY_STRING);
     addNFAEdge(automata->nodes + start, ni, NFA_EMPTY_STRING);
+    (*esp)[-1] = automata->nodes[ni].out;
 }
 
 static void dealD(NFA *automata,int **nsp, NFAEdge ***esp){
     int start1 = (*nsp)[-1];
-    int start2 = (*nsp)[-1];
-    NFAEdge *end1 = (*esp)[-2];
+    int start2 = (*nsp)[-2];
+    NFAEdge *end1 = (*esp)[-1];
     NFAEdge *end2 = (*esp)[-2];
     *nsp -= 2;
     *esp -= 2;
@@ -658,7 +662,7 @@ static void dealD(NFA *automata,int **nsp, NFAEdge ***esp){
     addNFAEdge(automata->nodes + ns,start2,NFA_EMPTY_STRING);
     end1->point = ne;
     end2->point = ne;
-    addNFAEdge(automata->nodes + ne,UNKNOW_POINT,EMPTY_STRING);
+    addNFAEdge(automata->nodes + ne,UNKNOW_POINT,NFA_EMPTY_STRING);
     *(*nsp)++ = ns;
     *(*esp)++ = automata->nodes[ne].out;
 }
@@ -695,9 +699,7 @@ NFA *getNFA(ASTNode *root) {
                     break;
                 case N_C:
                     if (nsp != nodeStack && esp != edgeStack) {
-                        int start = *--nsp;
-                        NFAEdge *end = *--esp;
-                        dealC(automata, start, end);
+                        dealC(automata, &nsp, &esp);
                     } else {
                         /*error*/
                     }
@@ -723,7 +725,8 @@ NFA *getNFA(ASTNode *root) {
                         initNFANode(automata->nodes + ni);
                         automata->nodes[ni].isEnd = 1;
                         esp[-1]->point = ni;
-                    } else{
+                    }
+                    else{
                         /*error */
                     }
                     break;
