@@ -37,7 +37,7 @@ void deleteIntVectorData(IntVector *iv);
 void deleteIntVectorLastData(IntVector *iv);
 void freeIntVector(IntVector *iv);
 
-IntVector * transExpress(char *express);
+IntVector * transExpress(unsigned char *express);
 IntVector * getEscapeCharacterExpress(IntVector *express);
 enum regexNodeAttr {
     SERIES,   /*串联*/
@@ -80,6 +80,7 @@ typedef struct ASTNode{
 ASTNode *parse(char express[]);
 
 #define UNKNOW_POINT -1
+#define NFA_EMPTY_STRING -1
 typedef struct NFAEdge{
     int point;
     int character;

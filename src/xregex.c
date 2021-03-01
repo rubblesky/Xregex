@@ -13,16 +13,14 @@
 #define FIRST_ALLOC_CHILD_SIZE (10)
 #define FIRST_ALLOC_CONENT_SIZE (30)
 
-typedef struct RegexTreeNode{
-    struct RegexTreeNode* parent;
-    struct RegexTreeNode* firstChild;
-    struct RegexTreeNode* nextSibling;
+typedef struct RegexTreeNode {
+    struct RegexTreeNode *parent;
+    struct RegexTreeNode *firstChild;
+    struct RegexTreeNode *nextSibling;
     enum Symbol symbol;
-    IntVector * string;
+    IntVector *string;
 
 } RegexTreeNode;
-
-
 
 
 void dealError(int exitStauts, const char *errorPosition, char *msg) {
@@ -64,7 +62,7 @@ int utf8ToInt(unsigned char *s, int *result) {
     for (int i = byte_num - 1; i > 0; i--) {
         s++;
         *result *= 0x40;
-        if (0x80 != (*s) & FIRST_TWO_BITS) {
+        if (0x80 != ((*s) & FIRST_TWO_BITS)) {
             return -1;//return  error
         } else {
             *result += (*s - 0x80);
@@ -111,7 +109,7 @@ int intToUtf8(int number, char *result) {
 
 
 /*convert express string into IntVector*/
-IntVector *transExpress(char *express) {
+IntVector *transExpress(unsigned char *express) {
     IntVector *iv = initIntVector(strlen(express));
     int i;
     while (utf8ToInt(express++, &i) != -1 && i != 0) {
@@ -594,7 +592,7 @@ ASTNode *getBinaryTree(RegexTreeNode *rnt, ASTNode *brnt) {
         brnt->symbol = rnt->symbol;
         brnt->string = rnt->string;
         brnt->left = getBinaryTree(rnt->firstChild, brnt->left);
-        brnt->right = (rnt->firstChild != NULL) ? getBinaryTree(rnt->firstChild->nextSibling, brnt->right):NULL;
+        brnt->right = (rnt->firstChild != NULL) ? getBinaryTree(rnt->firstChild->nextSibling, brnt->right) : NULL;
 
         return brnt;
     }
@@ -603,81 +601,141 @@ ASTNode *getBinaryTree(RegexTreeNode *rnt, ASTNode *brnt) {
 ASTNode *getAST(LexicalResult *lr) {
     RegexTreeNode *root = getRegexTree(lr);
     root = dealRegexTree(root);
-    ASTNode * ASTRoot;
-    ASTRoot = getBinaryTree(root,ASTRoot);
+    ASTNode *ASTRoot;
+    ASTRoot = getBinaryTree(root, ASTRoot);
     return ASTRoot;
 }
 
-ASTNode *parse(char express[]){
+ASTNode *parse(char express[]) {
     IntVector *iv = transExpress(express);
     IntVector *iv2 = getEscapeCharacterExpress(iv);
     freeIntVector(iv);
     LexicalResult *lr = lexicalAnalyse(iv2);
     freeIntVector(iv2);
-    struct ASTNode* ASTRoot = getAST(lr);
+    struct ASTNode *ASTRoot = getAST(lr);
     free(lr);
     return ASTRoot;
 }
 
-NFA *getNFA(ASTNode * root){
-    int     nodeStack[10000];
+static void dealT(NFA *automata, int **nsp, NFAEdge ***esp, IntVector *string) {
+    int ni;
+    ni = newNFANodeIndex(automata);
+    initNFANode(automata->nodes + ni);
+    *(*nsp)++ = ni;
+    int size = getIntVectorDataSize(string);
+    for (int i = 0; i < size - 1; i--) {
+        ni = newNFANodeIndex(automata);
+        initNFANode(automata->nodes + ni);
+        addNFAEdge(automata->nodes + ni - 1, ni, getIntVectorData(string, i));
+    }
+    addNFAEdge(automata->nodes + ni, UNKNOW_POINT, getIntVectorData(string, size - 1));
+    *(*esp)++ = automata->nodes[ni].out;
+    freeIntVector(string);
+}
+
+static void dealC(NFA *automata, int start, NFAEdge *end) {
+    int ni = newNFANodeIndex(automata);
+    initNFANode(automata->nodes + ni);
+    end->point = ni;
+    addNFAEdge(automata->nodes + ni, UNKNOW_POINT, NFA_EMPTY_STRING);
+    addNFAEdge(automata->nodes + ni, start, NFA_EMPTY_STRING);
+    addNFAEdge(automata->nodes + start, ni, NFA_EMPTY_STRING);
+}
+
+static void dealD(NFA *automata,int **nsp, NFAEdge ***esp){
+    int start1 = *nsp[-1];
+    int start2 = *nsp[-1];
+    NFAEdge *end1 = *esp[-2];
+    NFAEdge *end2 = *esp[-2];
+    nsp -= 2;
+    esp -= 2;
+    int ns = newNFANodeIndex(automata);
+    int ne = newNFANodeIndex(automata);
+    initNFANode(automata->nodes + ns);
+    initNFANode(automata->nodes + ne);
+
+    addNFAEdge(automata->nodes + ns,start1,NFA_EMPTY_STRING);
+    addNFAEdge(automata->nodes + ns,start2,NFA_EMPTY_STRING);
+    end1->point = ne;
+    end2->point = ne;
+    addNFAEdge(automata->nodes + ne,UNKNOW_POINT,EMPTY_STRING);
+    *(*nsp)++ = ns;
+    *(*esp)++ = automata->nodes[ne].out;
+}
+
+
+NFA *getNFA(ASTNode *root) {
+    int nodeStack[10000];
     NFAEdge *edgeStack[10000];
     ASTNode *treeStack[10000];
-    int     *nsp = nodeStack;
+    int *nsp = nodeStack;
     NFAEdge **esp = edgeStack;
     ASTNode **tsp = treeStack;
 
-    NFA * automata = initNFA();
-    int ni;
+    NFA *automata = initNFA();
     *tsp++ = root;
-    while (tsp != treeStack){
-        if( tsp[-1]->right != NULL ){
-            *tsp++ = tsp[-1]->right;
-        }else if( tsp[-1]->left != NULL){
-            *tsp++ = tsp[-1]->right;
-        }else{
+    while (tsp != treeStack) {
+        if (tsp[-1]->right != NULL) {
+            *tsp = tsp[-1]->right;
+            tsp += 1;
+        } else if (tsp[-1]->left != NULL) {
+            *tsp = tsp[-1]->left;
+            tsp += 1;
+        } else {
             switch (tsp[-1]->symbol) {
                 case N_S:
-
+                    if (nsp - 2 >= nodeStack && esp - 2 >= edgeStack) {
+                        esp[-2]->point = nsp[-1];
+                        esp[-2] = esp[-1];
+                        esp -= 1;
+                        nsp -= 1;
+                    } else {
+                        /* error */
+                    }
                     break;
                 case N_C:
+                    if (nsp != nodeStack && esp != edgeStack) {
+                        int start = *nsp--;
+                        NFAEdge *end = *esp--;
+                        dealC(automata, start, end);
+                    } else {
+                        /*error*/
+                    }
                     break;
                 case N_D:
+                    if (nsp - 2 >= nodeStack && esp - 2 >= edgeStack) {
+                        dealD(automata,&nsp,&esp);
+                    } else {
+                        /* error */
+                    }
                     break;
                 case N_E:
                     break;
                 case N_F:
                     break;
                 case T:
-                    ni = newNFANodeIndex(automata);
-                    initNFANode(automata->nodes+ni);
-                    *nsp++ = ni;
-                    IntVector *string = tsp[-1]->string;
-                    int size = getIntVectorDataSize(string);
-                    for(int i = 0;i < size-1 ;i--){
-                        ni = newNFANodeIndex(automata);
-                        initNFANode(automata->nodes+ni);
-                        addNFAEdge(automata->nodes + ni - 1,ni,getIntVectorData(string,i));
-                    }
-                    addNFAEdge(automata->nodes + ni,UNKNOW_POINT,getIntVectorData(string,size-1));
-                    *esp++ = automata->nodes[ni].out;
+                    dealT(automata, &nsp, &esp, tsp[-1]->string);
                     break;
                 case START:
+                    if(nsp -1 == nodeStack){
+                        automata->start = *nsp;
+                    } else{
+                        /*error */
+                    }
                     break;
                 default:
                     /*error*/
                     break;
             }
-
             tsp -= 1;
-            if(tsp != treeStack){
-                if(tsp[-1]->left == tsp[0]){
+            if (tsp != treeStack) {
+                if (tsp[-1]->left == tsp[0]) {
                     free(tsp[0]);
-                    tsp[-1]->left == NULL;
-                }else if(tsp[-1]->right == tsp[0]){
+                    tsp[-1]->left = NULL;
+                } else if (tsp[-1]->right == tsp[0]) {
                     free(tsp[0]);
-                    tsp[-1]->right == NULL;
-                }else{
+                    tsp[-1]->right = NULL;
+                } else {
                     /*error */
                 }
             }
