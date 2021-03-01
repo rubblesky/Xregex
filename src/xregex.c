@@ -623,12 +623,12 @@ static void dealT(NFA *automata, int **nsp, NFAEdge ***esp, IntVector *string) {
     initNFANode(automata->nodes + ni);
     *(*nsp)++ = ni;
     int size = getIntVectorDataSize(string);
-    for (int i = 0; i < size - 1; i--) {
+    for (int i = 0; i < size - 1; i++) {
         ni = newNFANodeIndex(automata);
         initNFANode(automata->nodes + ni);
         addNFAEdge(automata->nodes + ni - 1, ni, getIntVectorData(string, i));
     }
-    addNFAEdge(automata->nodes + ni, UNKNOW_POINT, getIntVectorData(string, size - 1));
+    addNFAEdge(automata->nodes + ni, UNKNOW_POINT, getIntVectorData(string,  - 1));
     *(*esp)++ = automata->nodes[ni].out;
     freeIntVector(string);
 }
@@ -643,12 +643,12 @@ static void dealC(NFA *automata, int start, NFAEdge *end) {
 }
 
 static void dealD(NFA *automata,int **nsp, NFAEdge ***esp){
-    int start1 = *nsp[-1];
-    int start2 = *nsp[-1];
-    NFAEdge *end1 = *esp[-2];
-    NFAEdge *end2 = *esp[-2];
-    nsp -= 2;
-    esp -= 2;
+    int start1 = (*nsp)[-1];
+    int start2 = (*nsp)[-1];
+    NFAEdge *end1 = (*esp)[-2];
+    NFAEdge *end2 = (*esp)[-2];
+    *nsp -= 2;
+    *esp -= 2;
     int ns = newNFANodeIndex(automata);
     int ne = newNFANodeIndex(automata);
     initNFANode(automata->nodes + ns);
@@ -695,8 +695,8 @@ NFA *getNFA(ASTNode *root) {
                     break;
                 case N_C:
                     if (nsp != nodeStack && esp != edgeStack) {
-                        int start = *nsp--;
-                        NFAEdge *end = *esp--;
+                        int start = *--nsp;
+                        NFAEdge *end = *--esp;
                         dealC(automata, start, end);
                     } else {
                         /*error*/
@@ -717,8 +717,12 @@ NFA *getNFA(ASTNode *root) {
                     dealT(automata, &nsp, &esp, tsp[-1]->string);
                     break;
                 case START:
-                    if(nsp -1 == nodeStack){
+                    if(nsp -1 == nodeStack && esp - 1 == edgeStack){
                         automata->start = *nsp;
+                        int ni = newNFANodeIndex(automata);
+                        initNFANode(automata->nodes + ni);
+                        automata->nodes[ni].isEnd = 1;
+                        esp[-1]->point = ni;
                     } else{
                         /*error */
                     }
@@ -741,4 +745,5 @@ NFA *getNFA(ASTNode *root) {
             }
         }
     }
+    return automata;
 }

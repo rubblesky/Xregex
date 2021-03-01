@@ -26,7 +26,8 @@ int newNFANodeIndex(struct NFA *nfa){
     } else{
         ;
     }
-    return ++nfa->usedSize;
+
+    return (nfa->usedSize)++;
 }
 
 void initNFANode(NFANode *node){

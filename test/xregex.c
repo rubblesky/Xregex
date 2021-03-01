@@ -9,12 +9,13 @@
 
 #include "xregex.h"
 void showAST(ASTNode *node);
-
+void  showNFA(NFA * automata);
 void testRegex(CuTest *tc) {
-    char *re = "ab|(cd)*e";
+    char *re = "a|b";
     struct ASTNode* ASTRoot = parse(re);
     showAST(ASTRoot);
-
+    NFA * NFA1 = getNFA(ASTRoot);
+    showNFA(NFA1);
 }
 
 CuSuite *
@@ -35,6 +36,19 @@ void showAST(ASTNode *node){
         printf("%d  ", node->symbol);
     }
 }
+
+void  showNFA(NFA * automata){
+    printf("\n");
+    for(int i = 0;i < automata->usedSize;i++){
+        printf("%d : ",i);
+        for(NFAEdge *p = automata->nodes[i].out;p != NULL;p = p->next){
+            printf("%d %c\t",p->point,p->character > 0?p->character:'e');
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
 /*
 char* printSymbol(struct RegexTreeNode *rtn) {
     if(rtn == NULL){

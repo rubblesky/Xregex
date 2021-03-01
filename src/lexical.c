@@ -49,6 +49,7 @@ LexicalResult * lexicalAnalyse(IntVector * express){
               k += 1;
               lr[k].type = CHARACTER_STRING;
               lr[k].string = initIntVector(10);
+              appendIntVector(lr[k].string,character);
               isContinuous = 1;
             }
         }

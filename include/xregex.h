@@ -105,4 +105,7 @@ NFA * initNFA();
 int newNFANodeIndex(struct NFA *nfa);
 void initNFANode(NFANode *node);
 void addNFAEdge(NFANode*node,int point,int character);
+
+
+NFA *getNFA(ASTNode *root);
 #endif
